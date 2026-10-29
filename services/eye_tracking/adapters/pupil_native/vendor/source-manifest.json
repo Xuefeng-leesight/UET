@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/pupil-labs/pupil",
+  "revision": "7a3cd9e8d2e54ac123ab0ed292d741732db899a2",
+  "license": "LGPL-3.0",
+  "sources": {
+    "COPYING": "589ed823e9a84c56feb95ac58e7cf384626b9cbf4fda2a907bc36e103de1bad2",
+    "COPYING.LESSER": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+    "pupil_src/shared_modules/gaze_mapping/gazer_3d/calibrate_3d.py": "66cea948aeefde3907086548f172167a5125149c6ebc2e1f5f83e7a5143ff02e",
+    "pupil_src/shared_modules/gaze_mapping/gazer_3d/bundle_adjustment.py": "bcde8f14515cd761054d02b9485ac0e7ae5b294ce5664642e737193c093b2ec8",
+    "pupil_src/shared_modules/gaze_mapping/gazer_3d/utils.py": "98ae1e994d1d3d9d509462974a386ea74dde8b6252e144d1dff63f659fe4618c",
+    "pupil_src/shared_modules/gaze_mapping/gazer_3d/gazer_headset.py": "3e40440bcb648fd49daffbb3a078370cfa94eba9aa175a0bd8aace70e9de019f",
+    "pupil_src/shared_modules/camera_models.py": "f9d67713ccf5824a24ecf1994326edcc25b9362d66b6488396dd05c9983ac0ea",
+    "pupil_src/shared_modules/blink_detection.py": "61fe90bf98f505fc3665492d02c3013801469a841e412f8682bc9e9cae0639f8"
+  }
+}

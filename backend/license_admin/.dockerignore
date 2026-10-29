@@ -1,0 +1,10 @@
+.env
+.env.production
+.env.ip
+.venv
+__pycache__
+*.pyc
+db.sqlite3
+media
+staticfiles
+.coverage

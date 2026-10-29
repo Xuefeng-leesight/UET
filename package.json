@@ -1,0 +1,169 @@
+{
+  "name": "mrt-manager",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "check:architecture": "node scripts/check-architecture.mjs",
+    "check:hygiene": "node scripts/check-repository-hygiene.mjs",
+    "check:python": "node scripts/check-python-sources.mjs",
+    "check:facial-contracts": "node scripts/check-facial-recording-contracts.mjs",
+    "check:sdk": "node scripts/validate-sdk.mjs",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "typecheck:all": "tsc --noEmit",
+    "verify": "npm run check:architecture && npm run typecheck && npm run build",
+    "release:check": "npm run check:hygiene && npm run check:architecture && npm run typecheck:all && npm run check:python && npm run check:facial-contracts && npm run build",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "prebuild:py-server:win": "node scripts/clean-python-service-builds.mjs",
+    "build:pupil-server": "node scripts/build-pupil-server.mjs",
+    "build:py-server:win": "py -3 -m PyInstaller --clean --noconfirm --distpath services/dist --workpath services/build/eye-tracking services/eye_tracking/packaging/mrt-ws-server.spec && py -3 -m PyInstaller --clean --noconfirm --distpath services/dist --workpath services/build/facial-analysis services/facial_analysis/packaging/facial-ws-server.spec && npm run build:pupil-server && npm run build:huahong-server",
+    "dist:win": "npm run build && npm run build:py-server:win && electron-builder --win nsis",
+    "docs:codegraph": "node scripts/generate-code-graph.mjs",
+    "codegraph:serve": "codegraph serve -c docs/code-graph/typescript.config.json --no-open",
+    "codegraph:serve:python": "codegraph serve -c docs/code-graph/python.config.json --port 8081 --no-open",
+    "build:huahong-server": "node scripts/build-huahong-server.mjs",
+    "setup:huahong": "py -3 -m venv services/eye_tracking/adapters/huahong/.venv && services/eye_tracking/adapters/huahong/.venv/Scripts/python.exe -m pip install -r services/eye_tracking/adapters/huahong/requirements.txt",
+    "check:huahong-sdk": "node scripts/validate-huahong-sdk.mjs",
+    "migrate:huahong-sdk": "node scripts/migrate-huahong-sdk.mjs"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@techstark/opencv-js": "^5.0.0-release.1",
+    "lucide-react": "^0.562.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "serialport": "^13.0.0",
+    "three": "^0.185.0"
+  },
+  "devDependencies": {
+    "@lemonberrylabs/codegraph": "0.1.0",
+    "@types/node": "^22.14.0",
+    "@types/three": "^0.185.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.4.21",
+    "electron": "^39.2.7",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0",
+    "vite-plugin-electron": "^0.29.0",
+    "vite-plugin-electron-renderer": "^0.14.6"
+  },
+  "build": {
+    "appId": "com.virtualspaces.mrtv2",
+    "productName": "HRT人因研究工具平台",
+    "icon": "icon.ico",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "icon.ico",
+        "to": "icon.ico"
+      },
+      {
+        "from": "icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "SDK",
+        "to": "SDK",
+        "filter": [
+          "**/*",
+          "!server{,/**}",
+          "!**/__pycache__{,/**}",
+          "!**/*.pyc",
+          "!**/.DS_Store",
+          "!huahong{,/**}"
+        ]
+      },
+      {
+        "from": "services/dist/mrt-ws-server.exe",
+        "to": "py/mrt-ws-server.exe"
+      },
+      {
+        "from": "services/dist/facial-ws-server.exe",
+        "to": "py/facial-ws-server.exe"
+      },
+      {
+        "from": "services/dist/pupil-backend",
+        "to": "py/pupil-backend"
+      },
+      {
+        "from": "services/dist/pupil-third-party",
+        "to": "py/pupil-third-party"
+      },
+      {
+        "from": "services/dist/ffprobe.exe",
+        "to": "py/ffprobe.exe"
+      },
+      {
+        "from": "scripts",
+        "to": "scripts"
+      },
+      {
+        "from": "node_modules/@ffmpeg-installer",
+        "to": "ffmpeg-installer",
+        "filter": [
+          "**/ffmpeg",
+          "**/ffmpeg.exe"
+        ]
+      },
+      {
+        "from": "SDK/huahong/et10/bin/windows/x64",
+        "to": "SDK/huahong/et10/bin/windows/x64",
+        "filter": [
+          "*.dll",
+          "tracker.xml"
+        ]
+      },
+      {
+        "from": "SDK/huahong/et28/bin/windows/x64",
+        "to": "SDK/huahong/et28/bin/windows/x64",
+        "filter": [
+          "*.dll"
+        ]
+      },
+      {
+        "from": "services/dist/mrt-huahong-server.exe",
+        "to": "py/mrt-huahong-server.exe"
+      }
+    ],
+    "win": {
+      "icon": "icon.ico",
+      "executableName": "HRT",
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "${productName}-${version}-setup-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "HRT人因研究工具平台",
+      "runAfterFinish": true,
+      "installerLanguages": [
+        "zh_CN"
+      ],
+      "language": "2052",
+      "license": "LICENSE",
+      "include": "scripts/installer.nsh",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "uninstallDisplayName": "HRT人因研究工具平台"
+    }
+  }
+}

@@ -1,0 +1,1 @@
+export const RECORD_POINTS_PARSE_VERSION = 17;

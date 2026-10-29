@@ -1,0 +1,1354 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root,
+html[data-theme='modern-light'] {
+  color-scheme: light;
+  --app-bg: #f5f6f7;
+  --app-text: #292b30;
+  --app-muted: #6b6e76;
+  --app-secondary-text: #565a63;
+  --app-surface: #ffffff;
+  --app-surface-2: #f8f9fa;
+  --app-surface-3: #f1f2f4;
+  --app-control: #e7e9ec;
+  --app-control-hover: #dce0e5;
+  --app-control-active: #cdd3db;
+  --app-control-disabled: #eceef1;
+  --app-control-disabled-text: #737983;
+  --app-control-strong: #e3e5e8;
+  --app-track: #d9dce1;
+  --app-border: transparent;
+  --app-primary: #326bb5;
+  --app-primary-foreground: #ffffff;
+  --app-primary-hover: #295d9f;
+  --app-button-primary: var(--app-control);
+  --app-button-primary-hover: var(--app-control-hover);
+  --app-button-primary-active: var(--app-control-active);
+  --app-primary-soft-50: #f0f4fa;
+  --app-primary-soft-100: #e7eef8;
+  --app-primary-ring: rgba(50, 107, 181, 0.18);
+  --app-success: #37745b;
+  --app-success-soft-100: #eef5f1;
+  --app-success-border: transparent;
+  --app-warning: #946524;
+  --app-warning-soft-100: #f9f4eb;
+  --app-warning-border: transparent;
+  --app-hover: #f2f3f5;
+  --app-hover-strong: #e9ebee;
+  --app-row-hover: #f7f8f9;
+  --app-danger: #b24a59;
+  --app-danger-soft-50: #faf0f1;
+  --app-danger-soft-100: #f6e6e9;
+  --app-scrollbar-track: transparent;
+  --app-scrollbar-thumb: #d5d7dc;
+  --app-scrollbar-thumb-hover: #b8bbc2;
+  --app-surface-shadow: 0 1px 2px rgba(33, 37, 43, 0.025), 0 4px 12px rgba(33, 37, 43, 0.035);
+  --app-floating-shadow: 0 2px 4px rgba(33, 37, 43, 0.04), 0 8px 16px rgba(33, 37, 43, 0.06), 0 16px 32px rgba(33, 37, 43, 0.04);
+  --app-dialog-shadow: 0 2px 4px rgba(33, 37, 43, 0.03), 0 8px 20px rgba(33, 37, 43, 0.06), 0 20px 48px rgba(33, 37, 43, 0.08);
+  --app-input-radius: 12px;
+  --app-dialog-radius: 16px;
+  --app-dialog-padding: 20px;
+  --app-menu-padding: 4px;
+  --app-font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+
+/* Dark mode uses neutral charcoal surfaces and its own softened accent palette. */
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --app-bg: #1e1f22;
+  --app-text: #d9dadd;
+  --app-muted: #9b9da5;
+  --app-secondary-text: #b8bac2;
+  --app-surface: #242529;
+  --app-surface-2: #2a2b2f;
+  --app-surface-3: #303136;
+  --app-control: #3b3e45;
+  --app-control-hover: #474b53;
+  --app-control-active: #555b65;
+  --app-control-disabled: #303339;
+  --app-control-disabled-text: #9ba1ab;
+  --app-control-strong: #41434a;
+  --app-track: #4c4f57;
+  --app-border: transparent;
+  --app-primary: #8aaee0;
+  --app-primary-foreground: #202631;
+  --app-primary-hover: #a0bde5;
+  --app-button-primary: var(--app-control);
+  --app-button-primary-hover: var(--app-control-hover);
+  --app-button-primary-active: var(--app-control-active);
+  --app-primary-soft-50: #2a303a;
+  --app-primary-soft-100: #303b4b;
+  --app-primary-ring: rgba(138, 174, 224, 0.22);
+  --app-success: #91b8a3;
+  --app-success-soft-100: #29352f;
+  --app-success-border: transparent;
+  --app-warning: #cbb085;
+  --app-warning-soft-100: #37322b;
+  --app-warning-border: transparent;
+  --app-hover: #2d2e33;
+  --app-hover-strong: #36383e;
+  --app-row-hover: #292a2e;
+  --app-danger: #d49aa2;
+  --app-danger-soft-50: #382d31;
+  --app-danger-soft-100: #433138;
+  --app-scrollbar-track: transparent;
+  --app-scrollbar-thumb: #41434a;
+  --app-scrollbar-thumb-hover: #595c65;
+  --app-surface-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.12);
+  --app-floating-shadow: 0 2px 4px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.16), 0 16px 32px rgba(0, 0, 0, 0.10);
+  --app-dialog-shadow: 0 2px 4px rgba(0, 0, 0, 0.10), 0 8px 20px rgba(0, 0, 0, 0.16), 0 20px 48px rgba(0, 0, 0, 0.14);
+}
+
+/* Glass mode: neutral cool white surfaces, with blue kept for accents (selection,
+ * sliders, switches, primary text) and a liquid glass lens marking the navigation
+ * selection. Large areas such as empty video stages use --app-bg, so it stays
+ * close to neutral. */
+html[data-theme='glass'] {
+  color-scheme: light;
+  --app-bg: #eef1f5;
+  --app-text: #1b2230;
+  --app-muted: #5b6577;
+  --app-secondary-text: #434d5f;
+  --app-surface: #fbfcfd;
+  --app-surface-2: #f6f7f9;
+  --app-surface-3: #f0f2f5;
+  --app-control: #f1f3f6;
+  --app-control-hover: #e9ecf1;
+  /* Selected controls keep a faint blue hint. */
+  --app-control-active: #e3eaf5;
+  --app-control-disabled: #f1f3f6;
+  --app-control-disabled-text: #8a93a3;
+  --app-control-strong: #e9ecf1;
+  --app-track: #dde2e9;
+  --app-border: transparent;
+  --app-primary: #5c9bf0;
+  --app-primary-foreground: #ffffff;
+  --app-primary-hover: #4d8de6;
+  --app-button-primary: var(--app-control);
+  --app-button-primary-hover: var(--app-control-hover);
+  --app-button-primary-active: var(--app-control-active);
+  --app-primary-soft-50: #f1f6fe;
+  --app-primary-soft-100: #e7f0fd;
+  --app-primary-ring: rgba(92, 155, 240, 0.2);
+  --app-success: #2f7a5c;
+  --app-success-soft-100: #eaf6f0;
+  --app-success-border: transparent;
+  --app-warning: #9a6a1f;
+  --app-warning-soft-100: #fbf4e8;
+  --app-warning-border: transparent;
+  --app-hover: #f2f4f7;
+  --app-hover-strong: #eaedf1;
+  --app-row-hover: #f4f6f8;
+  --app-danger: #c0435a;
+  --app-danger-soft-50: #fcf0f2;
+  --app-danger-soft-100: #f8e3e7;
+  --app-scrollbar-track: transparent;
+  --app-scrollbar-thumb: #cfd5dd;
+  --app-scrollbar-thumb-hover: #b3bbc7;
+  --app-surface-shadow: 0 1px 2px rgba(27, 34, 48, 0.04), 0 4px 12px rgba(27, 34, 48, 0.05);
+  --app-floating-shadow: 0 2px 4px rgba(27, 34, 48, 0.05), 0 8px 16px rgba(27, 34, 48, 0.07), 0 16px 32px rgba(27, 34, 48, 0.05);
+  --app-dialog-shadow: 0 2px 4px rgba(27, 34, 48, 0.04), 0 8px 20px rgba(27, 34, 48, 0.07), 0 20px 48px rgba(27, 34, 48, 0.09);
+
+  /* Window chrome around the content panels: sidebar, top bar and status bar. */
+  --glass-chrome: #e6eefb;
+
+  /* Fields and attached dropdown menus: the white glass of the action buttons. */
+  --glass-field: color-mix(in srgb, var(--app-surface) 65%, transparent);
+  --glass-field-rest: inset 0 0 0 1px rgba(255, 255, 255, 0.85), inset 0 1px 0 #ffffff, 0 2px 8px rgba(23, 32, 51, 0.08);
+  --glass-field-lift: inset 0 0 0 1px rgba(255, 255, 255, 0.95), inset 0 1px 0 #ffffff, 0 6px 18px rgba(23, 32, 51, 0.12);
+
+}
+
+/* Windows keeps the shared layout and accent, with clearer neutral layers.
+ * The window background stays aligned with Electron's title bar palette. */
+html[data-platform='windows'][data-theme='modern-light'] {
+  --app-text: #26282b;
+  --app-secondary-text: #50545b;
+  --app-muted: #666b73;
+  --app-surface-2: #fafafa;
+  --app-surface-3: #eef0f2;
+  --app-control-strong: #e2e5e8;
+  --app-hover: #eceef1;
+  --app-hover-strong: #e3e6ea;
+  --app-row-hover: #f0f2f4;
+}
+
+html[data-platform='windows'][data-theme='dark'] {
+  --app-text: #dedfe2;
+  --app-secondary-text: #bfc1c7;
+  --app-muted: #a1a4ac;
+  --app-surface-2: #292a2e;
+  --app-surface-3: #32343a;
+  --app-control-strong: #45484f;
+  --app-hover: #34363c;
+  --app-hover-strong: #3e4148;
+  --app-row-hover: #2e3035;
+}
+
+html[data-theme] .bg-white {
+  background-color: var(--app-surface) !important;
+}
+
+/* Translucent UI overlays also follow the theme; media pixels are unchanged. */
+html[data-theme] .bg-white\/90 {
+  background-color: color-mix(in srgb, var(--app-surface) 90%, transparent) !important;
+}
+
+html[data-theme] .bg-white\/85 {
+  background-color: color-mix(in srgb, var(--app-surface) 85%, transparent) !important;
+}
+
+html[data-theme] .bg-sky-50\/60 {
+  background-color: color-mix(in srgb, var(--app-primary-soft-50) 60%, transparent) !important;
+}
+
+html[data-theme] .bg-rose-50\/40 {
+  background-color: color-mix(in srgb, var(--app-danger-soft-50) 40%, transparent) !important;
+}
+
+html[data-theme] .bg-slate-50 {
+  background-color: var(--app-surface-2) !important;
+}
+
+html[data-theme] .bg-slate-50\/50 {
+  background-color: color-mix(in srgb, var(--app-surface-2) 55%, transparent) !important;
+}
+
+html[data-theme] .bg-slate-50\/30 {
+  background-color: color-mix(in srgb, var(--app-surface-2) 35%, transparent) !important;
+}
+
+html[data-theme] .bg-slate-50\/60 {
+  background-color: color-mix(in srgb, var(--app-surface-2) 65%, transparent) !important;
+}
+
+html[data-theme] .bg-slate-50\/80 {
+  background-color: color-mix(in srgb, var(--app-surface-2) 85%, transparent) !important;
+}
+
+html[data-theme] .bg-slate-100 {
+  background-color: var(--app-surface-3) !important;
+}
+
+html[data-theme] .bg-slate-200 {
+  background-color: var(--app-control-strong) !important;
+}
+
+html[data-theme] .bg-slate-300 {
+  background-color: var(--app-track) !important;
+}
+
+html[data-theme] .hover\:bg-slate-50:hover {
+  background-color: var(--app-hover) !important;
+}
+
+html[data-theme] .hover\:bg-slate-100:hover,
+html[data-theme] .hover\:bg-slate-200:hover {
+  background-color: var(--app-hover-strong) !important;
+}
+
+html[data-theme] .hover\:bg-slate-50\/50:hover,
+html[data-theme] .hover\:bg-slate-100\/50:hover {
+  background-color: var(--app-row-hover) !important;
+}
+
+html[data-theme] .hover\:border-slate-400:hover,
+html[data-theme] .hover\:border-slate-300:hover,
+html[data-theme] .border-slate-300,
+html[data-theme] .border-slate-200,
+html[data-theme] .border-slate-100 {
+  border-color: var(--app-border) !important;
+  background-clip: padding-box;
+}
+
+html[data-theme] .divide-slate-50 > :not([hidden]) ~ :not([hidden]),
+html[data-theme] .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--app-border) !important;
+}
+
+html[data-theme] .text-slate-900,
+html[data-theme] .text-slate-800,
+html[data-theme] .text-slate-700 {
+  color: var(--app-text) !important;
+}
+
+html[data-theme] .text-slate-600 {
+  color: var(--app-secondary-text) !important;
+}
+
+html[data-theme] .text-slate-500,
+html[data-theme] .text-slate-400,
+html[data-theme] .text-slate-300 {
+  color: var(--app-muted) !important;
+}
+
+html[data-theme] .bg-sky-500,
+html[data-theme] .bg-sky-600 {
+  background-color: var(--app-primary) !important;
+}
+
+html[data-theme] .hover\:bg-sky-600:hover,
+html[data-theme] .hover\:bg-sky-700:hover {
+  background-color: var(--app-primary-hover) !important;
+}
+
+html[data-theme] .bg-blue-50,
+html[data-theme] .bg-sky-50,
+html[data-theme] .hover\:bg-sky-50:hover {
+  background-color: var(--app-primary-soft-50) !important;
+}
+
+html[data-theme] .bg-sky-100 {
+  background-color: var(--app-primary-soft-100) !important;
+}
+
+html[data-theme] .text-blue-700,
+html[data-theme] .text-sky-600,
+html[data-theme] .text-sky-500,
+html[data-theme] .text-sky-700 {
+  color: var(--app-primary) !important;
+}
+
+html[data-theme] .bg-emerald-50,
+html[data-theme] .bg-emerald-50\/40,
+html[data-theme] .hover\:bg-emerald-50:hover,
+html[data-theme] .bg-emerald-100 {
+  background-color: var(--app-success-soft-100) !important;
+}
+
+html[data-theme] .text-emerald-600,
+html[data-theme] .text-emerald-700 {
+  color: var(--app-success) !important;
+}
+
+html[data-theme] .border-emerald-200 {
+  border-color: var(--app-success-border) !important;
+}
+
+html[data-theme] .bg-amber-50,
+html[data-theme] .bg-amber-50\/50,
+html[data-theme] .bg-amber-100 {
+  background-color: var(--app-warning-soft-100) !important;
+}
+
+html[data-theme] .text-amber-600,
+html[data-theme] .text-amber-700,
+html[data-theme] .text-amber-800 {
+  color: var(--app-warning) !important;
+}
+
+html[data-theme] .border-amber-200 {
+  border-color: var(--app-warning-border) !important;
+}
+
+html[data-theme] input[type='range'].mrt-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+}
+
+html[data-theme] input[type='range'].mrt-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--app-track);
+  border-radius: 9999px;
+  box-shadow: none;
+}
+
+html[data-theme] input[type='range'].mrt-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--app-primary);
+  border: 2px solid var(--app-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  margin-top: -5px;
+}
+
+html[data-theme] input[type='range'].mrt-slider:focus-visible {
+  outline: none;
+}
+
+html[data-theme] input[type='range'].mrt-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 4px var(--app-primary-ring),
+    0 1px 6px color-mix(in srgb, var(--app-primary) 35%, transparent);
+}
+
+html[data-theme] input[type='range'].mrt-slider::-moz-range-track {
+  height: 4px;
+  background: var(--app-track);
+  border-radius: 9999px;
+  box-shadow: none;
+}
+
+html[data-theme] input[type='range'].mrt-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--app-primary);
+  border: 2px solid var(--app-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+html[data-theme] input[type='range'].mrt-slider::-moz-focus-outer {
+  border: 0;
+}
+
+html[data-theme] .border-sky-400,
+html[data-theme] .border-sky-500,
+html[data-theme] .hover\:border-sky-500:hover {
+  border-color: var(--app-primary) !important;
+}
+
+@keyframes mrt-calib-breath {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.34;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.88;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.34;
+  }
+}
+
+html[data-theme] .border-blue-200,
+html[data-theme] .border-sky-200,
+html[data-theme] .border-sky-100,
+html[data-theme] .border-rose-200 {
+  border-color: transparent !important;
+}
+
+html[data-theme] .hover\:text-sky-600:hover {
+  color: var(--app-primary) !important;
+}
+
+html[data-theme] .hover\:text-slate-600:hover,
+html[data-theme] .hover\:text-slate-700:hover {
+  color: var(--app-text) !important;
+}
+
+html[data-theme] .focus\:border-sky-500:focus {
+  border-color: var(--app-primary) !important;
+}
+
+html[data-theme] .focus\:ring-sky-500\/10:focus {
+  --tw-ring-color: var(--app-primary-ring) !important;
+}
+
+html[data-theme] .accent-sky-500 {
+  accent-color: var(--app-primary) !important;
+}
+
+html[data-theme] .bg-sky-500.text-white,
+html[data-theme] .bg-sky-600.text-white {
+  color: var(--app-primary-foreground) !important;
+}
+
+html[data-theme] .text-rose-600,
+html[data-theme] .text-rose-500,
+html[data-theme] .text-rose-700 {
+  color: var(--app-danger) !important;
+}
+
+html[data-theme] .border-rose-500 {
+  border-color: var(--app-danger) !important;
+}
+
+html[data-theme] .hover\:bg-rose-50:hover {
+  background-color: var(--app-danger-soft-50) !important;
+}
+
+html[data-theme] .bg-rose-50,
+html[data-theme] .bg-rose-100 {
+  background-color: var(--app-danger-soft-50) !important;
+}
+
+/* Use native text rendering; numeric readouts opt into the shared mono stack. */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-variant-numeric: tabular-nums;
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  user-select: none;
+  overflow: hidden;
+}
+
+html[data-platform='windows'] body {
+  font-family: 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
+}
+
+/* Balance multi-line headings without forcing line breaks in translations. */
+:is(h1, h2, h3, .mrt-title) {
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/* Apply to numeric fragments so labels keep their proportional typeface. */
+.mrt-number {
+  white-space: nowrap;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+}
+
+.mrt-scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mrt-scrollbar-hide::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+@keyframes mrt-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mrt-spinner {
+  animation: mrt-spin 0.8s linear infinite;
+  will-change: transform;
+}
+
+input,
+textarea,
+[contenteditable] {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-app-region: no-drag;
+}
+
+.mrt-combo-editor,
+.mrt-combo-editor-controls,
+.mrt-combo-editor button,
+.mrt-combo-editor input,
+.mrt-combo-editor textarea,
+.mrt-combo-editor select {
+  -webkit-app-region: no-drag;
+}
+
+/*
+ * English UI should use sentence case instead of forced ALL CAPS.
+ * Disable Tailwind's uppercase transform only when language is en-US.
+ */
+html[lang='en-US'] .uppercase {
+  text-transform: none !important;
+}
+
+/* Input cards stay unframed at rest and during input, including selects.
+ * Native checkboxes, media sliders and color swatches keep their own geometry. */
+html[data-theme] :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']),
+  textarea,
+  select,
+  .mrt-select,
+  .mrt-input-display,
+  button[aria-haspopup='listbox']
+) {
+  border: 0 !important;
+  border-radius: var(--app-control-radius, var(--app-input-radius, 12px)) !important;
+  background-color: var(--app-control-fill, var(--app-control)) !important;
+  background-clip: border-box;
+  color: var(--app-control-ink, var(--app-text)) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition-property: background-color, box-shadow, color;
+  transition-duration: 120ms;
+}
+
+/* Shared insets also cover native selects and the two modality multiselects.
+ * The absolute chevron gets its own space; labels must not add it a second time. */
+html[data-theme] :is(select, button[aria-haspopup='listbox']) {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+html[data-theme] .mrt-select[data-select-arrow] {
+  padding-right: 34px;
+}
+
+/* An expanded dropdown is one continuous control: no gap, matching surfaces,
+ * square joining edges, and rounding only on the outside silhouette. */
+html[data-theme] button[aria-haspopup='listbox'][aria-expanded='true'] {
+  background-color: var(--app-control) !important;
+  --app-control-radius: var(--app-input-radius, 12px) var(--app-input-radius, 12px) 0 0;
+  border-radius: var(--app-control-radius) !important;
+}
+
+html[data-theme] button[aria-haspopup='listbox'][aria-expanded='true'][data-side='top'] {
+  --app-control-radius: 0 0 var(--app-input-radius, 12px) var(--app-input-radius, 12px);
+}
+
+html[data-theme] .mrt-dropdown-panel {
+  margin: 0 !important;
+  border: 0;
+  background-color: var(--app-control) !important;
+  border-radius: 0 0 var(--app-input-radius, 12px) var(--app-input-radius, 12px);
+  /* Keep the popup shadow off the shared edge, where it would draw a seam. */
+  clip-path: inset(0 -64px -64px -64px);
+}
+
+/* Nested option corners share the panel's center: outer = inner + inset. */
+html[data-theme] .mrt-dropdown-panel {
+  padding: var(--app-menu-padding);
+}
+
+html[data-theme] .mrt-dropdown-option {
+  border-radius: max(0px, calc(var(--app-input-radius) - var(--app-menu-padding)));
+}
+
+html[data-theme] .mrt-dropdown-panel[data-side='top'] {
+  border-radius: var(--app-input-radius, 12px) var(--app-input-radius, 12px) 0 0;
+  clip-path: inset(-64px -64px 0 -64px);
+}
+
+/* Action popovers have an independent outline, unlike attached selects. */
+html[data-theme] .mrt-action-menu {
+  border: 0;
+  border-radius: var(--app-input-radius, 12px);
+  background-color: var(--app-control) !important;
+}
+
+html[data-theme] input[type='color'] {
+  border: 0 !important;
+}
+
+html[data-theme] input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+html[data-theme] input[type='color']::-webkit-color-swatch {
+  border: 0;
+  border-radius: 6px;
+}
+
+html[data-theme] input[type='color']::-moz-color-swatch {
+  border: 0;
+  border-radius: 6px;
+}
+
+html[data-theme] textarea {
+  --app-input-radius: 14px;
+}
+
+html[data-platform='windows'] {
+  --app-input-radius: 6px;
+}
+
+html[data-platform='windows'][data-theme] textarea {
+  --app-input-radius: 8px;
+}
+
+/* Limit the tighter geometry to shared actions, preserving circular media
+ * buttons, switches, calibration targets and visualization shapes. */
+html[data-platform='windows'][data-theme] .mrt-button {
+  border-radius: 6px;
+}
+
+html[data-theme] :is(input, textarea)::placeholder {
+  color: var(--app-secondary-text) !important;
+  opacity: 1;
+}
+
+html[data-theme] :is(input, textarea, select, .mrt-select, button[aria-haspopup='listbox']):disabled {
+  opacity: 1 !important;
+  cursor: not-allowed;
+}
+
+/* All action buttons share the input palette, including primary actions.
+ * Switch tracks and data graphics keep colors that encode their state/data. */
+html[data-theme] button:not([role='switch']):not([data-visual-control]) {
+  --app-control-fill: var(--app-control);
+  --app-control-ink: var(--app-text);
+  background-color: var(--app-control-fill) !important;
+  color: var(--app-control-ink) !important;
+}
+
+html[data-theme] button:not([role='switch']):not([data-visual-control]):is(
+  [aria-pressed='true'], [aria-selected='true'], [aria-current='page']
+) {
+  --app-control-fill: var(--app-control-active);
+}
+
+html[data-theme] button:not([role='switch']):not([data-visual-control]):hover:not(:disabled):not(.mrt-button-muted):not([aria-expanded='true']) {
+  --app-control-fill: var(--app-control-hover);
+}
+
+html[data-theme] button:not([role='switch']):not([data-visual-control]):is(:active, [aria-pressed='true'], [aria-selected='true'], [aria-current='page']):not(:disabled):not(.mrt-button-muted):not([aria-expanded='true']) {
+  --app-control-fill: var(--app-control-active);
+}
+
+html[data-theme] :is(input, textarea, select, .mrt-select, button[aria-haspopup='listbox']):hover:not(:disabled):not(.mrt-button-muted):not([aria-expanded='true']) {
+  --app-control-fill: var(--app-control-hover);
+}
+
+/* An open trigger must stay the same shade as its attached panel. */
+html[data-theme] button:not([role='switch']):not([data-visual-control])[aria-haspopup][aria-expanded='true'] {
+  --app-control-fill: var(--app-control);
+}
+
+/* Explicit disabled colors remain legible on every surface; opacity would
+ * blend the same control into different grays on different parent panels. */
+html[data-theme] :is(input, textarea, select, button):disabled,
+html[data-theme] .mrt-button-muted {
+  --app-control-fill: var(--app-control-disabled);
+  --app-control-ink: var(--app-control-disabled-text);
+  opacity: 1 !important;
+  cursor: not-allowed;
+}
+
+html[data-theme] button:not([role='switch']):not([data-visual-control]):is(:disabled, .mrt-button-muted) {
+  --app-control-fill: var(--app-control-disabled);
+  --app-control-ink: var(--app-control-disabled-text);
+}
+
+html[data-theme] :is(input, textarea):disabled::placeholder {
+  color: var(--app-control-disabled-text) !important;
+}
+
+/* Names and tabs are text interactions, not filled action controls. Keep the
+ * semantic variant through hover, selection and disabled states. */
+html[data-theme] button:is(.mrt-button-text, .mrt-button-tab, .mrt-button-row) {
+  --app-control-fill: transparent !important;
+}
+
+/* Inline AOI property editing blends into its row. An open select still
+ * uses the shared attached-menu surface, so its join remains seamless. */
+html[data-theme] .mrt-input-plain:not([aria-expanded='true']) {
+  --app-control-fill: transparent !important;
+}
+
+html[data-theme] button.mrt-button-row:hover:not(:disabled) {
+  --app-control-fill: var(--app-control-hover) !important;
+}
+
+/* Both navigation menus use fill alone for selection. Keep a transparent
+ * border in every state so switching pages does not change item geometry. */
+html[data-theme] .mrt-navigation button:not([role='switch']):not([data-visual-control]) {
+  background-color: transparent !important;
+  border: 1px solid transparent;
+}
+
+html[data-theme] .mrt-navigation button:not([role='switch']):not([data-visual-control]):hover:not(:disabled):not([aria-current='page']):not([aria-pressed='true']) {
+  background-color: var(--app-hover) !important;
+}
+
+html[data-theme] .mrt-navigation button:not([role='switch']):not([data-visual-control]):is([aria-current='page'], [aria-pressed='true']) {
+  background-color: var(--app-control) !important;
+}
+
+html[data-theme] :is(.font-mono, .tabular-nums, .mrt-number, input[type='number']) {
+  font-family: var(--app-font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/* Keep body text at regular weight; reduce emphasized text by one weight step. */
+html[data-theme='dark'] .font-medium { font-weight: 400; }
+html[data-theme='dark'] .font-semibold { font-weight: 500; }
+html[data-theme='dark'] .font-bold { font-weight: 600; }
+html[data-theme='dark'] .font-extrabold { font-weight: 700; }
+html[data-theme='dark'] .font-black { font-weight: 800; }
+
+/* Intermediate weights avoid pushing compact CJK labels into heavy bold.
+ * Keep regular body copy and the existing numeric font rules unchanged. */
+html[data-platform='windows'][data-theme] .font-medium { font-weight: 400; }
+html[data-platform='windows'][data-theme] .font-semibold { font-weight: 500; }
+html[data-platform='windows'][data-theme] .font-bold { font-weight: 600; }
+
+/* Flat surfaces stay quiet; opt-in separation and floating UI use soft layers. */
+html[data-theme] :is(.shadow, .shadow-sm, .shadow-md) {
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+}
+
+html[data-theme] .shadow-lg {
+  --tw-shadow: var(--app-floating-shadow);
+}
+
+html[data-theme] .mrt-dialog {
+  box-shadow: var(--app-dialog-shadow);
+}
+
+html[data-theme] .mrt-surface {
+  box-shadow: var(--app-surface-shadow);
+}
+
+/* Dialogs have their own silhouette; distant form controls are not nested contours. */
+html[data-theme] .mrt-modal {
+  border-radius: var(--app-dialog-radius);
+  max-height: calc(100dvh - 32px);
+}
+
+html[data-platform='windows'] {
+  --app-dialog-radius: 12px;
+}
+
+.mrt-modal-header {
+  padding: 16px var(--app-dialog-padding);
+}
+
+.mrt-modal-footer {
+  padding: 0 var(--app-dialog-padding) 16px;
+}
+
+.mrt-modal-content {
+  padding: 4px var(--app-dialog-padding) 20px;
+}
+
+/* Animate only explicit content groups, not live values, charts or video. */
+@keyframes mrt-enter {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mrt-enter-content {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mrt-stagger > .mrt-enter {
+  animation: mrt-enter 160ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+/* Keep portal triggers at their final coordinates even during entry. */
+.mrt-stagger > .mrt-modal-content {
+  animation-name: mrt-enter-content;
+}
+
+.mrt-stagger > .mrt-enter:nth-child(2) { animation-delay: 25ms; }
+.mrt-stagger > .mrt-enter:nth-child(n + 3) { animation-delay: 50ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mrt-stagger > .mrt-enter { animation: none; }
+}
+
+/* Keyboard focus remains distinct from hover and selection in every theme. */
+html[data-theme] button:focus-visible,
+html[data-theme] a:focus-visible,
+html[data-theme] input:focus-visible,
+html[data-theme] textarea:focus-visible,
+html[data-theme] select:focus-visible {
+  outline: 2px solid var(--app-primary);
+  outline-offset: 2px;
+}
+
+/* Glass mode: the navigation selection is a liquid glass lens (LiquidGlassLens.tsx)
+ * that glides over the menu labels. The selected item drops its own fill and keeps
+ * its label colour; the lens tints whatever it covers. */
+html[data-theme='glass'] .mrt-navigation button:not([role='switch']):not([data-visual-control]):is([aria-current='page'], [aria-pressed='true']) {
+  background-color: transparent !important;
+}
+
+/* The lens is three layers moving together (see LiquidGlassLens.tsx):
+ * - body: the white glass, painted *under* the labels (z-index -1 inside the
+ *   isolated host), so the labels stay readable on it. No rim line and no inner
+ *   edge shading: those read as a white ring on the blue chrome. Its outline comes
+ *   from a soft outer shadow; the glass feel from a soft light inside, kept off the
+ *   edges.
+ * - ink: screen-blends the primary colour *over* the labels. Dark text it covers
+ *   turns blue, the white body and light chrome stay as they are, so the colour
+ *   change follows the glass edge as it slides.
+ * - glass: an invisible top layer that takes the drag and, while moving, the edge
+ *   refraction set by the component. */
+html[data-theme='glass'] .mrt-glass-lens-host {
+  isolation: isolate;
+  background-color: var(--app-surface);
+}
+
+html[data-theme='glass'] .mrt-glass-lens-body {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 1px 2px rgba(31, 60, 110, 0.08), 0 6px 18px rgba(31, 60, 110, 0.12);
+  transition: opacity 0.2s;
+  will-change: transform;
+}
+
+/* Soft light from the upper left, inside the glass. */
+html[data-theme='glass'] .mrt-glass-lens-body::before {
+  content: "";
+  position: absolute;
+  left: 6%;
+  top: 12%;
+  width: 55%;
+  height: 60%;
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+}
+
+/* A faint cool tone towards the bottom, for depth. */
+html[data-theme='glass'] .mrt-glass-lens-body::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 0;
+  height: 45%;
+  background: linear-gradient(180deg, rgba(225, 235, 250, 0), rgba(225, 235, 250, 0.45));
+}
+
+html[data-theme='glass'] .mrt-glass-lens-ink {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  border-radius: 10px;
+  /* Darker than the soft primary so the tinted label keeps its contrast. */
+  background: #1f6fe5;
+  mix-blend-mode: screen;
+  transition: opacity 0.2s;
+  will-change: transform;
+}
+
+html[data-theme='glass'] .mrt-glass-lens {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  opacity: 0;
+  cursor: grab;
+  touch-action: none;
+  border-radius: 10px;
+  transition: opacity 0.2s;
+  will-change: transform;
+}
+
+html[data-theme='glass'] .mrt-glass-lens.is-dragging {
+  cursor: grabbing;
+}
+
+/* Glass action buttons (iOS 26 interactive glass): a pane floating on the surface
+ * with a bright rim; hovering swells it slightly, pressing squeezes it. No moving
+ * highlight, so the label stays easy to read. Rows inside menus and lists (options,
+ * menu items, tabs), text, tab and row buttons, menu triggers, navigation, disabled
+ * buttons and switches keep their own looks: swelling there would cover neighbours. */
+html[data-theme='glass'] button:not([role='switch'], [role='option'], [role='menuitem'], [role='tab'], [data-visual-control], .mrt-button-text, .mrt-button-tab, .mrt-button-row, .mrt-button-muted, .mrt-dropdown-option, :disabled, [aria-haspopup='listbox']):not(.mrt-navigation button, [role='listbox'] button, [role='menu'] button, .w-full.text-left) {
+  --app-control-fill: color-mix(in srgb, var(--app-surface) 65%, transparent) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.85),
+    inset 0 1px 0 #ffffff,
+    0 2px 8px rgba(23, 32, 51, 0.08);
+  transition: scale 0.25s cubic-bezier(0.3, 0.7, 0.3, 1.3), box-shadow 0.25s, background-color 0.25s, color 0.25s;
+}
+
+html[data-theme='glass'] button:not([role='switch'], [role='option'], [role='menuitem'], [role='tab'], [data-visual-control], .mrt-button-text, .mrt-button-tab, .mrt-button-row, .mrt-button-muted, .mrt-dropdown-option, :disabled, [aria-haspopup='listbox']):not(.mrt-navigation button, [role='listbox'] button, [role='menu'] button, .w-full.text-left):hover {
+  --app-control-fill: color-mix(in srgb, var(--app-surface) 80%, transparent) !important;
+  scale: 1.04;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.95),
+    inset 0 1px 0 #ffffff,
+    0 6px 18px rgba(23, 32, 51, 0.12);
+}
+
+html[data-theme='glass'] button:not([role='switch'], [role='option'], [role='menuitem'], [role='tab'], [data-visual-control], .mrt-button-text, .mrt-button-tab, .mrt-button-row, .mrt-button-muted, .mrt-dropdown-option, :disabled, [aria-haspopup='listbox']):not(.mrt-navigation button, [role='listbox'] button, [role='menu'] button, .w-full.text-left):is(:active, [aria-pressed='true'], [aria-selected='true'], [aria-current='page']) {
+  scale: 0.97;
+}
+
+/* Selected (pressed) buttons stay white glass; their text turns blue. */
+html[data-theme='glass'] button:not([role='switch'], [role='option'], [role='menuitem'], [role='tab'], [data-visual-control], .mrt-button-text, .mrt-button-tab, .mrt-button-row, .mrt-button-muted, .mrt-dropdown-option, :disabled, [aria-haspopup='listbox']):not(.mrt-navigation button, [role='listbox'] button, [role='menu'] button, .w-full.text-left):is([aria-pressed='true'], [aria-selected='true'], [aria-current='page']) {
+  --app-control-ink: var(--app-primary-hover) !important;
+}
+
+html[data-theme='glass'] button:not([role='switch'], [role='option'], [role='menuitem'], [role='tab'], [data-visual-control], .mrt-button-text, .mrt-button-tab, .mrt-button-row, .mrt-button-muted, .mrt-dropdown-option, :disabled, [aria-haspopup='listbox']):not(.mrt-navigation button, [role='listbox'] button, [role='menu'] button, .w-full.text-left):is([aria-pressed='true'], [aria-selected='true'], [aria-current='page']) {
+  scale: 1;
+}
+
+/* Disabled action buttons are the same glass pane, faded and resting flat, so they
+ * pair with the live buttons next to them. */
+html[data-theme='glass'] button:is(:disabled, .mrt-button-muted):not([role='switch'], [role='option'], [role='menuitem'], [role='tab'], [data-visual-control], .mrt-button-text, .mrt-button-tab, .mrt-button-row, .mrt-dropdown-option, [aria-haspopup='listbox']):not(.mrt-navigation button, [role='listbox'] button, [role='menu'] button, .w-full.text-left) {
+  --app-control-fill: color-mix(in srgb, var(--app-control) 85%, transparent) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+}
+
+/* Full-width, left-aligned buttons are list rows (records, files). They lie flat on
+ * their panel and only tint on hover; the selected row keeps the active fill. */
+html[data-theme='glass'] button.w-full.text-left:not([role='switch'], [role='option'], .mrt-dropdown-option, [data-visual-control], :disabled, .mrt-button-muted, [aria-haspopup='listbox']):not(.mrt-navigation button) {
+  --app-control-fill: transparent !important;
+}
+
+html[data-theme='glass'] button.w-full.text-left:not([role='switch'], [role='option'], .mrt-dropdown-option, [data-visual-control], :disabled, .mrt-button-muted, [aria-haspopup='listbox']):not(.mrt-navigation button):is(:hover, [aria-pressed='true'], [aria-selected='true']) {
+  --app-control-fill: color-mix(in srgb, #ffffff 70%, transparent) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
+    inset 0 1px 0 #ffffff,
+    0 3px 10px rgba(23, 32, 51, 0.10);
+}
+
+html[data-theme='glass'] button.w-full.text-left:not([role='switch'], [role='option'], .mrt-dropdown-option, [data-visual-control], :disabled, .mrt-button-muted, [aria-haspopup='listbox']):not(.mrt-navigation button):is([aria-pressed='true'], [aria-selected='true']) {
+  --app-control-ink: var(--app-primary-hover) !important;
+}
+
+/* Navigation items (main menu, settings menu, home and settings buttons) float on
+ * hover as a glass pane. They do not swell: the menu is a narrow scroll area. The
+ * selected item is marked by the sliding lens instead. */
+html[data-theme='glass'] .mrt-navigation button:not([role='switch']):not([data-visual-control]):hover:not(:disabled):not([aria-current='page']):not([aria-pressed='true']) {
+  background-color: color-mix(in srgb, #ffffff 60%, transparent) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
+    inset 0 1px 0 #ffffff,
+    0 3px 10px rgba(23, 32, 51, 0.10);
+}
+
+html[data-theme='glass'] .mrt-navigation button:not([role='switch']):not([data-visual-control]) {
+  transition: box-shadow 0.25s, background-color 0.25s, color 0.25s;
+}
+
+/* Pale blue window chrome: the app shell (seen around the content panels, i.e. the
+ * top bar), the main sidebar and the status bar. Content panels keep their own
+ * surfaces, and pages that paint --app-bg inside them stay neutral. The lens host in
+ * the sidebar matches, since the lens ink blends against it. */
+html[data-theme='glass'] .mrt-app-shell,
+html[data-theme='glass'] .mrt-app-shell > .mrt-navigation,
+html[data-theme='glass'] .mrt-app-shell > .mrt-navigation .mrt-glass-lens-host,
+html[data-theme='glass'] .mrt-app-shell footer {
+  background-color: var(--glass-chrome);
+}
+
+/* Floating lists (projects on the home page, subjects, records; not data export):
+ * the white content panel stays as on every other page, and inside it every row
+ * becomes its own white card with a soft shadow, 4px apart. Hovering a row swells
+ * it slightly like a button; a selected row turns its text blue. The header row
+ * stays flat. The table keeps a little padding so the swell and the shadows are not
+ * clipped by the scroll area. */
+html[data-theme='glass'] .mrt-float-list-panel thead tr {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+html[data-theme='glass'] table.mrt-float-list {
+  border-collapse: separate !important;
+  border-spacing: 0 4px;
+  padding: 0 10px 10px;
+}
+
+/* The header is plain labels on the panel. It is sticky, so it takes the panel
+ * colour (not transparent) to hide rows scrolling under it. */
+html[data-theme='glass'] table.mrt-float-list > thead th {
+  background-color: var(--app-surface) !important;
+  padding-top: 4px;
+  padding-bottom: 2px;
+}
+
+html[data-theme='glass'] table.mrt-float-list > tbody > tr {
+  border: 0 !important;
+  filter: drop-shadow(0 1px 1px rgba(23, 32, 51, 0.05)) drop-shadow(0 2px 6px rgba(23, 32, 51, 0.09));
+  transition: scale 0.25s cubic-bezier(0.3, 0.7, 0.3, 1.3), filter 0.25s;
+}
+
+html[data-theme='glass'] table.mrt-float-list > tbody > tr > td {
+  background-color: #ffffff !important;
+  box-shadow: inset 0 1px 0 #ffffff;
+  transition: background-color 0.25s;
+}
+
+html[data-theme='glass'] table.mrt-float-list > tbody > tr > td:first-child {
+  border-radius: 12px 0 0 12px;
+}
+
+html[data-theme='glass'] table.mrt-float-list > tbody > tr > td:last-child {
+  border-radius: 0 12px 12px 0;
+}
+
+html[data-theme='glass'] table.mrt-float-list > tbody > tr > td:only-child {
+  border-radius: 12px;
+}
+
+html[data-theme='glass'] table.mrt-float-list > tbody > tr:hover {
+  scale: 1.01;
+  filter: drop-shadow(0 6px 12px rgba(23, 32, 51, 0.12));
+}
+
+html[data-theme='glass'] table.mrt-float-list > tbody > tr:hover > td {
+  background-color: #ffffff !important;
+}
+
+/* A cell-filling row button (project name on the home page) is part of the card. */
+html[data-theme='glass'] table.mrt-float-list > tbody > tr > td > button.mrt-button-row.w-full.text-left:is(:hover, :focus, :active, *) {
+  --app-control-fill: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='glass'] table.mrt-float-list > tbody > tr.bg-sky-50 > td,
+html[data-theme='glass'] table.mrt-float-list > tbody > tr.bg-sky-50 > td :is(div, span) {
+  color: var(--app-primary-hover) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme='glass'] table.mrt-float-list > tbody > tr {
+    transition: none;
+    scale: none !important;
+  }
+}
+
+/* Monitor tiles (recording page): the title bar sits over the black video, so it
+ * fades from translucent black into the picture with white text instead of being a
+ * white strip. Its maximise/minimise buttons are dark glass. The bar keeps its place
+ * and size, so the video area (and calibration geometry) does not change. */
+html[data-theme='glass'] .mrt-monitor-tile-header {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 100%) !important;
+  border-color: transparent !important;
+}
+
+html[data-theme='glass'] .mrt-monitor-tile-header,
+html[data-theme='glass'] .mrt-monitor-tile-header :is(span, svg) {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html[data-theme='glass'] .mrt-monitor-tile-header button.rounded-md:is(*, :hover, :active) {
+  --app-control-fill: rgba(255, 255, 255, 0.14) !important;
+  --app-control-ink: #ffffff !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+html[data-theme='glass'] .mrt-monitor-tile-header button.rounded-md:hover {
+  --app-control-fill: rgba(255, 255, 255, 0.24) !important;
+}
+
+/* Room for the hover shadow and the lens shadow inside the scrolling main menu. */
+html[data-theme='glass'] .mrt-navigation > .overflow-y-auto {
+  margin-inline: -6px;
+  padding-inline: 6px;
+}
+
+/* Fields (inputs, text areas, selects, read-only values, dropdown triggers) are the
+ * same white glass pane as the action buttons, floating on the panel. Unlike buttons
+ * they do not swell on hover, only lift; typing in one draws a blue rim. The field
+ * list repeats the shared field rule's so these outrank it. Inline AOI fields stay
+ * plain and disabled fields keep the shared disabled look. */
+html[data-theme='glass'] :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']),
+  textarea,
+  select,
+  .mrt-select,
+  .mrt-input-display,
+  button[aria-haspopup='listbox']
+):not(.mrt-input-plain, :disabled) {
+  background-color: var(--glass-field) !important;
+  box-shadow: var(--glass-field-rest) !important;
+  transition-property: background-color, box-shadow, color;
+  transition-duration: 0.25s;
+}
+
+html[data-theme='glass'] :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']),
+  textarea,
+  select,
+  .mrt-select,
+  button[aria-haspopup='listbox']
+):not(.mrt-input-plain, :disabled, [readonly], [aria-expanded='true']):hover {
+  box-shadow: var(--glass-field-lift) !important;
+}
+
+html[data-theme='glass'] :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']),
+  textarea,
+  select
+):not(.mrt-input-plain, :disabled, [readonly]):focus {
+  background-color: #ffffff !important;
+  box-shadow: inset 0 0 0 1px var(--app-primary), 0 6px 18px rgba(23, 32, 51, 0.12) !important;
+}
+
+/* An open dropdown and its menu are one white pane: the trigger casts its shadow
+ * away from the menu and the menu carries the floating shadow, so nothing marks the
+ * join (mirrored when the menu opens upwards). */
+html[data-theme='glass'] :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']),
+  button[aria-haspopup='listbox']
+)[aria-expanded='true']:not(:disabled) {
+  background-color: #ffffff !important;
+  box-shadow: 0 -2px 8px rgba(23, 32, 51, 0.06) !important;
+}
+
+html[data-theme='glass'] :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']),
+  button[aria-haspopup='listbox']
+)[aria-expanded='true'][data-side='top']:not(:disabled) {
+  box-shadow: 0 2px 8px rgba(23, 32, 51, 0.06) !important;
+}
+
+html[data-theme='glass'] .mrt-dropdown-panel {
+  background-color: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(27, 34, 48, 0.12) !important;
+}
+
+html[data-theme='glass'] .mrt-dropdown-panel[data-side='top'] {
+  box-shadow: 0 -10px 24px rgba(27, 34, 48, 0.12) !important;
+}
+
+/* Options sit on the menu's own fill instead of the grey button fill. */
+html[data-theme='glass'] .mrt-dropdown-panel button.mrt-dropdown-option {
+  background-color: transparent !important;
+}
+
+html[data-theme='glass'] .mrt-dropdown-panel .mrt-dropdown-option:not(:disabled, :has(> [data-switch-track])):hover {
+  background-color: color-mix(in srgb, #ffffff 70%, transparent) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
+    inset 0 1px 0 #ffffff,
+    0 3px 10px rgba(23, 32, 51, 0.10);
+}
+
+html[data-theme='glass'] .mrt-dropdown-panel .mrt-dropdown-option[aria-selected='true'] {
+  --app-control-ink: var(--app-primary-hover) !important;
+}
+
+/* Shared switches. Ordinary themes retain compact round thumbs; glass uses the
+ * approved capsule / lens proportions, with inset room for the pressed overhang. */
+html[data-theme] .mrt-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  overflow: visible;
+  cursor: pointer;
+}
+.mrt-switch-visual {
+  --mrt-switch-width: 36px;
+  --mrt-switch-height: 20px;
+  --mrt-switch-thumb-size: 16px;
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--mrt-switch-width);
+  height: 28px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+.mrt-switch-visual[data-size='compact'] {
+  --mrt-switch-width: 32px;
+  --mrt-switch-height: 16px;
+  --mrt-switch-thumb-size: 12px;
+}
+.mrt-switch-visual[data-size='timeline'] { --mrt-switch-width: 40px; }
+.mrt-switch-track {
+  position: absolute;
+  width: var(--mrt-switch-width);
+  height: var(--mrt-switch-height);
+  top: calc((28px - var(--mrt-switch-height)) / 2);
+  left: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+.mrt-switch-thumb {
+  position: absolute;
+  width: var(--mrt-switch-thumb-size);
+  height: var(--mrt-switch-thumb-size);
+  left: 2px;
+  top: calc((28px - var(--mrt-switch-thumb-size)) / 2);
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: transform 180ms ease;
+  pointer-events: none;
+}
+.mrt-switch-visual[data-checked='true'] .mrt-switch-thumb {
+  transform: translateX(calc(var(--mrt-switch-width) - var(--mrt-switch-thumb-size) - 4px));
+}
+.mrt-switch-lens { display: none; pointer-events: none; }
+/* Keep keyboard focus on the visible track, rather than the larger lens hit area. */
+html[data-theme] .mrt-switch:focus-visible { outline: none; }
+html[data-theme] .mrt-switch:focus-visible .mrt-switch-visual::after {
+  content: '';
+  position: absolute;
+  width: var(--mrt-switch-width);
+  height: var(--mrt-switch-height);
+  left: calc((100% - var(--mrt-switch-width)) / 2);
+  top: calc((28px - var(--mrt-switch-height)) / 2);
+  border-radius: 9999px;
+  outline: 2px solid var(--app-primary);
+  outline-offset: 2px;
+  pointer-events: none;
+}
+.mrt-switch-paint-on, .mrt-switch-paint-off {
+  position: absolute;
+  width: 0;
+  height: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+html[data-theme='glass'] .mrt-switch-visual {
+  --mrt-switch-scale: 0.78125;
+  --mrt-switch-width: 50px;
+  --mrt-switch-height: 21.875px;
+  width: 70px;
+  touch-action: none;
+}
+html[data-theme='glass'] .mrt-switch-visual[data-size='compact'] {
+  --mrt-switch-scale: 0.65625;
+  --mrt-switch-width: 42px;
+  --mrt-switch-height: 18.375px;
+  width: 60px;
+}
+html[data-theme='glass'] .mrt-switch { touch-action: none; }
+html[data-theme='glass'] .mrt-switch-track { left: calc((100% - var(--mrt-switch-width)) / 2); }
+html[data-theme='glass'] .mrt-switch-thumb {
+  width: calc(36px * var(--mrt-switch-scale));
+  height: calc(24px * var(--mrt-switch-scale));
+  top: calc(14px - 12px * var(--mrt-switch-scale));
+  left: calc((100% - var(--mrt-switch-width)) / 2 + 2px * var(--mrt-switch-scale));
+}
+html[data-theme='glass'] .mrt-switch-visual[data-checked='true'] .mrt-switch-thumb { transform: translateX(calc(24px * var(--mrt-switch-scale))); }
+html[data-theme='glass'] .mrt-switch-visual[data-canvas-ready='true'] > :is(.mrt-switch-track, .mrt-switch-thumb) { visibility: hidden; }
+html[data-theme='glass'] .mrt-switch-visual[data-canvas-ready='true'] .mrt-switch-lens {
+  display: block;
+  position: absolute;
+  width: calc(110px * var(--mrt-switch-scale));
+  height: calc(76px * var(--mrt-switch-scale));
+  left: calc(50% - 54px * var(--mrt-switch-scale));
+  top: calc(14px - 38px * var(--mrt-switch-scale));
+}
+html[data-theme] :is(.mrt-switch:disabled, .mrt-dropdown-option:disabled) .mrt-switch-visual,
+html[data-theme] .mrt-switch:disabled { cursor: not-allowed; }
+html[data-theme] .mrt-switch:disabled { opacity: 0.5; }
+@media (prefers-reduced-motion: reduce) {
+  .mrt-switch-thumb { transition: none; }
+  html[data-theme='glass'] button { transition: none !important; scale: none !important; }
+}

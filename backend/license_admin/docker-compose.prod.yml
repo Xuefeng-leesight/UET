@@ -1,0 +1,122 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ust_license}
+      POSTGRES_USER: ${POSTGRES_USER:-ust}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env.production 中设置 POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ust} -d ${POSTGRES_DB:-ust_license}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - backend
+
+  app:
+    build:
+      context: .
+    env_file:
+      - ${UST_ENV_FILE:-.env.production}
+    environment:
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?请设置 DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${LICENSE_DOMAIN:?请设置 LICENSE_DOMAIN}
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://${LICENSE_DOMAIN:?请设置 LICENSE_DOMAIN}
+      DJANGO_SECURE_SSL_REDIRECT: "true"
+      DJANGO_SECURE_HSTS_SECONDS: "0"
+      LICENSE_SIGNING_PRIVATE_KEY: ${LICENSE_SIGNING_PRIVATE_KEY:?请设置 LICENSE_SIGNING_PRIVATE_KEY}
+      DEVICE_SECRET_ENCRYPTION_KEY: ${DEVICE_SECRET_ENCRYPTION_KEY:?请设置 DEVICE_SECRET_ENCRYPTION_KEY}
+      # nginx 环境启用 X-Accel-Redirect 大文件下载（sendfile 直发，绕开 gunicorn 超时）
+      DJANGO_DOWNLOAD_X_ACCEL: "true"
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-ust_license}
+      POSTGRES_USER: ${POSTGRES_USER:-ust}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请设置 POSTGRES_PASSWORD}
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000
+             --workers ${GUNICORN_WORKERS:-3} --timeout ${GUNICORN_TIMEOUT:-300}
+             --access-logfile - --error-logfile -"
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os, urllib.request; request = urllib.request.Request('http://127.0.0.1:8000/api/v1/health', headers={'Host': os.environ['DJANGO_ALLOWED_HOSTS'], 'X-Forwarded-Proto': 'https'}); urllib.request.urlopen(request, timeout=5)",
+        ]
+      interval: 15s
+      timeout: 6s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - backend
+
+  nginx:
+    build:
+      context: ./deploy/nginx
+    environment:
+      LICENSE_DOMAIN: ${LICENSE_DOMAIN:?请设置 LICENSE_DOMAIN}
+      NGINX_MAX_BODY_SIZE: ${NGINX_MAX_BODY_SIZE:-2048m}
+    volumes:
+      - static_data:/var/www/static:ro
+      - media_data:/var/www/media:ro
+      - certbot_webroot:/var/www/certbot:ro
+      - letsencrypt_data:/etc/letsencrypt:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend
+
+  certbot:
+    image: certbot/certbot:v5.7.0
+    entrypoint: ["/bin/sh", "/opt/ust/renew.sh"]
+    environment:
+      LICENSE_DOMAIN: ${LICENSE_DOMAIN:?请设置 LICENSE_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:?请设置 LETSENCRYPT_EMAIL}
+    volumes:
+      - ./deploy/certbot/renew.sh:/opt/ust/renew.sh:ro
+      - certbot_webroot:/var/www/certbot
+      - letsencrypt_data:/etc/letsencrypt
+    depends_on:
+      nginx:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - backend
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:
+  certbot_webroot:
+  letsencrypt_data:
+
+networks:
+  backend:
+    driver: bridge

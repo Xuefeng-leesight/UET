@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pupil / MRT · 开发验证工具（不随产品发布）</title>
+<style>
+  :root{color-scheme:dark;--ink:#e5e9e3;--muted:#99a49b;--line:#344038;--accent:#d7fb79}
+  *{box-sizing:border-box}body{margin:0;background:#111813;color:var(--ink);font-family:"SFMono-Regular",Consolas,"Microsoft YaHei",monospace}
+  main{max-width:1260px;margin:auto;padding:36px 32px}header{display:flex;justify-content:space-between;align-items:start;gap:24px;border-bottom:1px solid var(--line);padding-bottom:24px}
+  small{color:var(--accent);letter-spacing:.16em}h1{font-size:clamp(24px,4vw,38px);font-weight:500;letter-spacing:-.04em;margin:12px 0 0}
+  #status{font-size:13px;color:var(--accent);border:1px solid var(--line);padding:10px 14px;white-space:nowrap}
+  .notice{border-left:2px solid var(--accent);padding-left:14px;color:var(--muted);font-size:13px;line-height:1.8;margin:24px 0}
+  .stage{position:relative;display:flex;align-items:center;justify-content:center;width:100%;min-width:0;min-height:260px;aspect-ratio:16/9;overflow:hidden;background:#080c09;border:1px solid var(--line)}
+  #image{display:none;width:100%;height:100%;object-fit:contain;position:absolute;inset:0}#empty{color:var(--muted);font-size:14px;padding:24px;text-align:center}
+  #source{position:absolute;left:16px;top:16px;background:#111813e8;border:1px solid var(--line);padding:8px 12px;font-size:12px;z-index:1;color:var(--accent)}
+  dl{display:grid;grid-template-columns:repeat(4,1fr);margin:0;border:1px solid var(--line);border-top:0}dl div{padding:18px;border-right:1px solid var(--line)}dl div:last-child{border:0}dt{font-size:11px;color:var(--muted);margin-bottom:9px}dd{margin:0;font-size:17px;overflow-wrap:anywhere}
+  footer{display:flex;justify-content:space-between;gap:18px;padding-top:22px;color:var(--muted);font-size:12px;line-height:1.8}button{border:1px solid var(--line);background:transparent;color:var(--ink);padding:10px 16px;font:inherit;cursor:pointer;white-space:nowrap}button:hover,button:focus-visible{border-color:var(--accent);outline:none;color:var(--accent)}
+  @media(max-width:640px){main{padding:24px 16px}header{flex-direction:column;gap:18px}dl{grid-template-columns:repeat(2,1fr)}dl div{border-bottom:1px solid var(--line)}footer{flex-direction:column}.stage{min-height:220px}}
+</style>
+<main>
+  <header><div><small>MRT / PUPIL CORE · DIAGNOSTICS</small><h1>采集联调监视器</h1></div><span id="status" role="status">正在连接</span></header>
+  <p class="notice">独立开发入口，不是 MRT 正式录制页面。此页仅预览场景画面；不判断校准成功，也不控制保存。</p>
+  <section class="stage" aria-label="实时场景画面"><span id="source">来源待确认</span><img id="image" alt="Pupil 场景相机实时预览"><span id="empty">等待 world BGR 帧。请确认 Capture 的 Frame Publisher 已启用。</span></section>
+  <dl><div><dt>FRAME SIZE</dt><dd id="size">—</dd></div><div><dt>PREVIEW RECEIVED</dt><dd id="count">0</dd></div><div><dt>SOURCE TIME / s</dt><dd id="time">—</dd></div><div><dt>CONNECTION</dt><dd id="generation">—</dd></div></dl>
+  <footer><span>仅限本机访问 · 预览允许丢帧，计数不代表保存帧数。<br>断开后清除旧画面；保存状态请查看命令行结果及 .meta.json。</span><button id="reconnect" type="button">重新连接预览 ↗</button></footer>
+</main>
+<script src="/viewer.js"></script>
+</html>

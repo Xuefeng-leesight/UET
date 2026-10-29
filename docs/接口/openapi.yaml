@@ -1,0 +1,2860 @@
+openapi: 3.0.3
+info:
+  title: UST License 与版本管理 API
+  version: 1.1.0
+  description: UST PC/安卓客户端、测试工具与后台管理端的版本化接口。
+paths:
+  /api/v1/client/activations:
+    post:
+      operationId: v1_client_activations_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ActivationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ActivationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/client/activations/deactivate:
+    post:
+      operationId: v1_client_activations_deactivate_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeactivationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeactivationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeactivationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/client/licenses/verify:
+    post:
+      operationId: v1_client_licenses_verify_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ActivationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ActivationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/client/releases/{download_token}/download:
+    get:
+      operationId: v1_client_releases_download_retrieve
+      parameters:
+      - in: path
+        name: download_token
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/client/releases/latest:
+    get:
+      operationId: v1_client_releases_latest_retrieve
+      parameters:
+      - in: query
+        name: architecture
+        schema:
+          type: string
+      - in: query
+        name: channel
+        schema:
+          type: string
+      - in: query
+        name: current_version
+        schema:
+          type: string
+      - in: query
+        name: machine_hash
+        schema:
+          type: string
+      - in: query
+        name: platform
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: product_type
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/client/signing-keys/{key_id}:
+    get:
+      operationId: v1_client_signing_keys_retrieve
+      parameters:
+      - in: path
+        name: key_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/client/test-tools:
+    get:
+      operationId: v1_client_test_tools_list
+      parameters:
+      - in: query
+        name: platform
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicTestTool'
+          description: ''
+  /api/v1/client/test-tools/{download_token}/download:
+    get:
+      operationId: v1_client_test_tools_download_retrieve
+      parameters:
+      - in: path
+        name: download_token
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/health:
+    get:
+      operationId: v1_health_retrieve
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/management/audit-logs/:
+    get:
+      operationId: v1_management_audit_logs_list
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditLog'
+          description: ''
+  /api/v1/management/audit-logs/{id}/:
+    get:
+      operationId: v1_management_audit_logs_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 操作日志 的 唯一整数值。
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLog'
+          description: ''
+  /api/v1/management/customer-eye-trackers/:
+    get:
+      operationId: v1_management_customer_eye_trackers_list
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomerEyeTracker'
+          description: ''
+    post:
+      operationId: v1_management_customer_eye_trackers_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerEyeTracker'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomerEyeTracker'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomerEyeTracker'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerEyeTracker'
+          description: ''
+  /api/v1/management/customer-eye-trackers/{id}/:
+    get:
+      operationId: v1_management_customer_eye_trackers_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 客户眼动设备 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerEyeTracker'
+          description: ''
+    put:
+      operationId: v1_management_customer_eye_trackers_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 客户眼动设备 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerEyeTracker'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomerEyeTracker'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomerEyeTracker'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerEyeTracker'
+          description: ''
+    patch:
+      operationId: v1_management_customer_eye_trackers_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 客户眼动设备 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomerEyeTracker'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomerEyeTracker'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomerEyeTracker'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerEyeTracker'
+          description: ''
+  /api/v1/management/customers/:
+    get:
+      operationId: v1_management_customers_list
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+          description: ''
+    post:
+      operationId: v1_management_customers_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Customer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Customer'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+          description: ''
+  /api/v1/management/customers/{id}/:
+    get:
+      operationId: v1_management_customers_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 客户 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+          description: ''
+    put:
+      operationId: v1_management_customers_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 客户 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Customer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Customer'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+          description: ''
+    patch:
+      operationId: v1_management_customers_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 客户 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomer'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+          description: ''
+  /api/v1/management/devices/:
+    get:
+      operationId: v1_management_devices_list
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LicenseDevice'
+          description: ''
+  /api/v1/management/devices/{id}/:
+    get:
+      operationId: v1_management_devices_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 激活设备 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseDevice'
+          description: ''
+    patch:
+      operationId: v1_management_devices_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 激活设备 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseDevice'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseDevice'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseDevice'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseDevice'
+          description: ''
+  /api/v1/management/eye-tracker-types/:
+    get:
+      operationId: v1_management_eye_tracker_types_list
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EyeTrackerType'
+          description: ''
+    post:
+      operationId: v1_management_eye_tracker_types_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EyeTrackerType'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EyeTrackerType'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EyeTrackerType'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EyeTrackerType'
+          description: ''
+  /api/v1/management/eye-tracker-types/{id}/:
+    get:
+      operationId: v1_management_eye_tracker_types_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 眼动设备类型 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EyeTrackerType'
+          description: ''
+    put:
+      operationId: v1_management_eye_tracker_types_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 眼动设备类型 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EyeTrackerType'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EyeTrackerType'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EyeTrackerType'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EyeTrackerType'
+          description: ''
+    patch:
+      operationId: v1_management_eye_tracker_types_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 眼动设备类型 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEyeTrackerType'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEyeTrackerType'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEyeTrackerType'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EyeTrackerType'
+          description: ''
+  /api/v1/management/license-items/:
+    get:
+      operationId: v1_management_license_items_list
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LicenseItem'
+          description: ''
+    post:
+      operationId: v1_management_license_items_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LicenseItem'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LicenseItem'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LicenseItem'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseItem'
+          description: ''
+  /api/v1/management/license-items/{id}/:
+    get:
+      operationId: v1_management_license_items_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 授权模块 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseItem'
+          description: ''
+    put:
+      operationId: v1_management_license_items_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 授权模块 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LicenseItem'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LicenseItem'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LicenseItem'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseItem'
+          description: ''
+    patch:
+      operationId: v1_management_license_items_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 授权模块 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseItem'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseItem'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseItem'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseItem'
+          description: ''
+    delete:
+      operationId: v1_management_license_items_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 授权模块 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/management/licenses/:
+    get:
+      operationId: v1_management_licenses_list
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/License'
+          description: ''
+    post:
+      operationId: v1_management_licenses_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/License'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/License'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/License'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+          description: ''
+  /api/v1/management/licenses/{id}/:
+    get:
+      operationId: v1_management_licenses_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 License 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+          description: ''
+    put:
+      operationId: v1_management_licenses_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 License 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/License'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/License'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/License'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+          description: ''
+    patch:
+      operationId: v1_management_licenses_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 License 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLicense'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLicense'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLicense'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+          description: ''
+  /api/v1/management/licenses/{id}/offline-license/:
+    post:
+      operationId: v1_management_licenses_offline_license_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 License 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/License'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/License'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/License'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+          description: ''
+  /api/v1/management/modules/:
+    get:
+      operationId: v1_management_modules_list
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductModule'
+          description: ''
+    post:
+      operationId: v1_management_modules_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductModule'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductModule'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductModule'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductModule'
+          description: ''
+  /api/v1/management/modules/{id}/:
+    get:
+      operationId: v1_management_modules_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 产品能力模块 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductModule'
+          description: ''
+    put:
+      operationId: v1_management_modules_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 产品能力模块 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductModule'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductModule'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductModule'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductModule'
+          description: ''
+    patch:
+      operationId: v1_management_modules_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 产品能力模块 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProductModule'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProductModule'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProductModule'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductModule'
+          description: ''
+  /api/v1/management/releases/:
+    get:
+      operationId: v1_management_releases_list
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Release'
+          description: ''
+    post:
+      operationId: v1_management_releases_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Release'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Release'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Release'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+          description: ''
+  /api/v1/management/releases/{id}/:
+    get:
+      operationId: v1_management_releases_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 软件版本 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+          description: ''
+    put:
+      operationId: v1_management_releases_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 软件版本 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Release'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Release'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Release'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+          description: ''
+    patch:
+      operationId: v1_management_releases_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 软件版本 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRelease'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRelease'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRelease'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+          description: ''
+  /api/v1/management/test-tools/:
+    get:
+      operationId: v1_management_test_tools_list
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TestTool'
+          description: ''
+    post:
+      operationId: v1_management_test_tools_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestTool'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TestTool'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TestTool'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestTool'
+          description: ''
+  /api/v1/management/test-tools/{id}/:
+    get:
+      operationId: v1_management_test_tools_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 测试工具 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestTool'
+          description: ''
+    put:
+      operationId: v1_management_test_tools_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 测试工具 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestTool'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TestTool'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TestTool'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestTool'
+          description: ''
+    patch:
+      operationId: v1_management_test_tools_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: 标识此 测试工具 的 UUID 字符串。
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTestTool'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTestTool'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTestTool'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestTool'
+          description: ''
+components:
+  schemas:
+    ActivationRequest:
+      type: object
+      properties:
+        license_key:
+          type: string
+          maxLength: 40
+        machine_code:
+          type: string
+          writeOnly: true
+          maxLength: 500
+          minLength: 4
+        device_name:
+          type: string
+          maxLength: 120
+        client_version:
+          type: string
+          maxLength: 40
+      required:
+      - license_key
+      - machine_code
+    ArchitectureEnum:
+      enum:
+      - x64
+      - arm64
+      - universal
+      type: string
+      description: |-
+        * `x64` - x64
+        * `arm64` - arm64
+        * `universal` - Universal
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        actor_name:
+          type: string
+          readOnly: true
+        action:
+          type: string
+          title: 动作
+          maxLength: 50
+        object_type:
+          type: string
+          title: 对象类型
+          maxLength: 120
+        object_id:
+          type: string
+          title: 对象 ID
+          maxLength: 100
+        object_repr:
+          type: string
+          title: 对象
+          maxLength: 300
+        detail:
+          title: 详情
+        request_id:
+          type: string
+          title: 请求 ID
+          maxLength: 64
+        ip_address:
+          type: string
+          nullable: true
+          title: IP
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 时间
+        actor:
+          type: integer
+          nullable: true
+          title: 操作人
+      required:
+      - action
+      - actor_name
+      - created_at
+      - id
+      - object_type
+    ChannelEnum:
+      enum:
+      - stable
+      - beta
+      type: string
+      description: |-
+        * `stable` - Stable
+        * `beta` - Beta
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        eye_tracker_count:
+          type: integer
+          readOnly: true
+        eye_trackers:
+          type: array
+          items:
+            $ref: '#/components/schemas/EyeTrackerSummary'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        code:
+          type: string
+          title: 客户编号
+          maxLength: 40
+        name:
+          type: string
+          title: 客户名称
+          maxLength: 200
+        contact_name:
+          type: string
+          title: 联系人
+          maxLength: 100
+        contact_phone:
+          type: string
+          title: 联系电话
+          maxLength: 50
+        contact_email:
+          title: 联系邮箱
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        address:
+          type: string
+          title: 地址
+          maxLength: 500
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CustomerStatusEnum'
+          title: 状态
+        notes:
+          type: string
+          title: 备注
+      required:
+      - code
+      - created_at
+      - eye_tracker_count
+      - eye_trackers
+      - id
+      - name
+      - updated_at
+    CustomerEyeTracker:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        customer:
+          type: string
+          format: uuid
+          title: 客户
+        customer_name:
+          type: string
+          readOnly: true
+        device_type:
+          type: string
+          format: uuid
+          title: 设备类型
+        device_type_code:
+          type: string
+          readOnly: true
+        device_type_name:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          title: 设备名称
+          maxLength: 120
+        serial_number:
+          type: string
+          title: 设备序列号
+          maxLength: 120
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CustomerEyeTrackerStatusEnum'
+          title: 状态
+        softdog_password:
+          type: string
+          writeOnly: true
+          maxLength: 512
+          minLength: 32
+        softdog_password_configured:
+          type: boolean
+          readOnly: true
+        softdog_password_hint:
+          type: string
+          readOnly: true
+        notes:
+          type: string
+          title: 备注
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - customer
+      - customer_name
+      - device_type
+      - device_type_code
+      - device_type_name
+      - display_name
+      - id
+      - softdog_password_configured
+      - softdog_password_hint
+      - updated_at
+    CustomerEyeTrackerStatusEnum:
+      enum:
+      - active
+      - maintenance
+      - retired
+      type: string
+      description: |-
+        * `active` - 正常
+        * `maintenance` - 维护中
+        * `retired` - 已停用
+    CustomerStatusEnum:
+      enum:
+      - active
+      - suspended
+      - closed
+      type: string
+      description: |-
+        * `active` - 正常
+        * `suspended` - 暂停
+        * `closed` - 停用
+    DeactivationRequest:
+      type: object
+      properties:
+        license_key:
+          type: string
+          maxLength: 40
+        machine_code:
+          type: string
+          writeOnly: true
+          maxLength: 500
+          minLength: 4
+      required:
+      - license_key
+      - machine_code
+    EyeTrackerSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        device_type:
+          type: string
+          format: uuid
+          title: 设备类型
+        device_type_code:
+          type: string
+          readOnly: true
+        device_type_name:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          title: 设备名称
+          maxLength: 120
+        serial_number:
+          type: string
+          title: 设备序列号
+          maxLength: 120
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CustomerEyeTrackerStatusEnum'
+          title: 状态
+        softdog_password_configured:
+          type: boolean
+          readOnly: true
+        softdog_password_hint:
+          type: string
+          readOnly: true
+      required:
+      - device_type
+      - device_type_code
+      - device_type_name
+      - display_name
+      - id
+      - softdog_password_configured
+      - softdog_password_hint
+    EyeTrackerType:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        code:
+          type: string
+          title: 设备类型编码
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          title: 设备类型名称
+          maxLength: 120
+        manufacturer:
+          type: string
+          title: 厂商
+          maxLength: 120
+        description:
+          type: string
+          title: 说明
+        is_active:
+          type: boolean
+          title: 启用
+      required:
+      - code
+      - created_at
+      - id
+      - name
+      - updated_at
+    License:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        license_key:
+          type: string
+          readOnly: true
+          title: 授权号
+        customer:
+          type: string
+          format: uuid
+          title: 客户
+        customer_name:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/LicenseStatusEnum'
+          title: 状态
+        starts_at:
+          type: string
+          format: date-time
+          title: 生效时间
+        expires_at:
+          type: string
+          format: date-time
+          title: 到期时间
+        max_devices:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: 设备上限
+        active_device_count:
+          type: integer
+          readOnly: true
+        allow_online_activation:
+          type: boolean
+          title: 允许在线激活
+        allow_offline_activation:
+          type: boolean
+          title: 允许离线授权
+        offline_grace_days:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: 离线宽限天数
+        notes:
+          type: string
+          title: 备注
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LicenseItem'
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: 创建人
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - active_device_count
+      - created_at
+      - created_by
+      - customer
+      - customer_name
+      - expires_at
+      - id
+      - items
+      - license_key
+      - updated_at
+    LicenseDevice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        license:
+          type: string
+          format: uuid
+          readOnly: true
+        license_key:
+          type: string
+          readOnly: true
+        machine_hash:
+          type: string
+          readOnly: true
+          title: 机器指纹哈希
+        machine_hint:
+          type: string
+          readOnly: true
+        device_name:
+          type: string
+          title: 设备名称
+          maxLength: 120
+        status:
+          allOf:
+          - $ref: '#/components/schemas/LicenseDeviceStatusEnum'
+          title: 状态
+        client_version:
+          type: string
+          title: 客户端版本
+          maxLength: 40
+        first_activated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 首次激活时间
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 最后在线时间
+        deactivated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: 解绑时间
+        last_ip:
+          type: string
+          readOnly: true
+          nullable: true
+          title: 最后 IP
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - deactivated_at
+      - first_activated_at
+      - id
+      - last_ip
+      - last_seen_at
+      - license
+      - license_key
+      - machine_hash
+      - machine_hint
+      - updated_at
+    LicenseDeviceStatusEnum:
+      enum:
+      - active
+      - deactivated
+      - revoked
+      type: string
+      description: |-
+        * `active` - 已激活
+        * `deactivated` - 已解绑
+        * `revoked` - 已吊销
+    LicenseItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        license:
+          type: string
+          format: uuid
+        module:
+          type: string
+          format: uuid
+          title: 产品模块
+        module_code:
+          type: string
+          readOnly: true
+        module_name:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          title: 模块到期时间
+        notes:
+          type: string
+          title: 备注
+          maxLength: 500
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - license
+      - module
+      - module_code
+      - module_name
+      - updated_at
+    LicenseStatusEnum:
+      enum:
+      - draft
+      - active
+      - suspended
+      - revoked
+      - expired
+      type: string
+      description: |-
+        * `draft` - 草稿
+        * `active` - 有效
+        * `suspended` - 暂停
+        * `revoked` - 吊销
+        * `expired` - 已过期
+    PatchedCustomer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        eye_tracker_count:
+          type: integer
+          readOnly: true
+        eye_trackers:
+          type: array
+          items:
+            $ref: '#/components/schemas/EyeTrackerSummary'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        code:
+          type: string
+          title: 客户编号
+          maxLength: 40
+        name:
+          type: string
+          title: 客户名称
+          maxLength: 200
+        contact_name:
+          type: string
+          title: 联系人
+          maxLength: 100
+        contact_phone:
+          type: string
+          title: 联系电话
+          maxLength: 50
+        contact_email:
+          title: 联系邮箱
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        address:
+          type: string
+          title: 地址
+          maxLength: 500
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CustomerStatusEnum'
+          title: 状态
+        notes:
+          type: string
+          title: 备注
+    PatchedCustomerEyeTracker:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        customer:
+          type: string
+          format: uuid
+          title: 客户
+        customer_name:
+          type: string
+          readOnly: true
+        device_type:
+          type: string
+          format: uuid
+          title: 设备类型
+        device_type_code:
+          type: string
+          readOnly: true
+        device_type_name:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          title: 设备名称
+          maxLength: 120
+        serial_number:
+          type: string
+          title: 设备序列号
+          maxLength: 120
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CustomerEyeTrackerStatusEnum'
+          title: 状态
+        softdog_password:
+          type: string
+          writeOnly: true
+          maxLength: 512
+          minLength: 32
+        softdog_password_configured:
+          type: boolean
+          readOnly: true
+        softdog_password_hint:
+          type: string
+          readOnly: true
+        notes:
+          type: string
+          title: 备注
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedEyeTrackerType:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        code:
+          type: string
+          title: 设备类型编码
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          title: 设备类型名称
+          maxLength: 120
+        manufacturer:
+          type: string
+          title: 厂商
+          maxLength: 120
+        description:
+          type: string
+          title: 说明
+        is_active:
+          type: boolean
+          title: 启用
+    PatchedLicense:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        license_key:
+          type: string
+          readOnly: true
+          title: 授权号
+        customer:
+          type: string
+          format: uuid
+          title: 客户
+        customer_name:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/LicenseStatusEnum'
+          title: 状态
+        starts_at:
+          type: string
+          format: date-time
+          title: 生效时间
+        expires_at:
+          type: string
+          format: date-time
+          title: 到期时间
+        max_devices:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: 设备上限
+        active_device_count:
+          type: integer
+          readOnly: true
+        allow_online_activation:
+          type: boolean
+          title: 允许在线激活
+        allow_offline_activation:
+          type: boolean
+          title: 允许离线授权
+        offline_grace_days:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: 离线宽限天数
+        notes:
+          type: string
+          title: 备注
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LicenseItem'
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: 创建人
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedLicenseDevice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        license:
+          type: string
+          format: uuid
+          readOnly: true
+        license_key:
+          type: string
+          readOnly: true
+        machine_hash:
+          type: string
+          readOnly: true
+          title: 机器指纹哈希
+        machine_hint:
+          type: string
+          readOnly: true
+        device_name:
+          type: string
+          title: 设备名称
+          maxLength: 120
+        status:
+          allOf:
+          - $ref: '#/components/schemas/LicenseDeviceStatusEnum'
+          title: 状态
+        client_version:
+          type: string
+          title: 客户端版本
+          maxLength: 40
+        first_activated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 首次激活时间
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 最后在线时间
+        deactivated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: 解绑时间
+        last_ip:
+          type: string
+          readOnly: true
+          nullable: true
+          title: 最后 IP
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedLicenseItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        license:
+          type: string
+          format: uuid
+        module:
+          type: string
+          format: uuid
+          title: 产品模块
+        module_code:
+          type: string
+          readOnly: true
+        module_name:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          title: 模块到期时间
+        notes:
+          type: string
+          title: 备注
+          maxLength: 500
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedProductModule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        code:
+          type: string
+          title: 模块编码
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          title: 模块名称
+          maxLength: 120
+        description:
+          type: string
+          title: 说明
+        is_active:
+          type: boolean
+          title: 启用
+    PatchedRelease:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        version:
+          type: string
+          title: 版本号
+          maxLength: 40
+        product_type:
+          allOf:
+          - $ref: '#/components/schemas/ReleaseProductTypeEnum'
+          default: pc
+          title: 产品端类型
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/ReleasePlatformEnum'
+          title: 平台
+        architecture:
+          allOf:
+          - $ref: '#/components/schemas/ArchitectureEnum'
+          default: x64
+          title: 架构
+        channel:
+          allOf:
+          - $ref: '#/components/schemas/ChannelEnum'
+          default: stable
+          title: 渠道
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ReleaseStatusEnum'
+          title: 状态
+        package:
+          type: string
+          format: uri
+          nullable: true
+          title: 安装包
+        file_sha256:
+          type: string
+          readOnly: true
+          title: SHA-256
+        file_size:
+          type: integer
+          readOnly: true
+          title: 文件大小
+        changelog:
+          type: string
+          title: 更新日志
+        force_update:
+          type: boolean
+          title: 强制更新
+        minimum_supported_version:
+          type: string
+          title: 最低支持版本
+          maxLength: 40
+        rollout_percentage:
+          type: integer
+          maximum: 100
+          minimum: 0
+          title: 灰度比例
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+          title: 发布时间
+        download_token:
+          type: string
+          format: uuid
+          readOnly: true
+          title: 下载令牌
+        download_count:
+          type: integer
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: 创建人
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedTestTool:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          title: 工具名称
+          maxLength: 120
+        version:
+          type: string
+          title: 版本号
+          maxLength: 40
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/TestToolPlatformEnum'
+          title: 平台
+        description:
+          type: string
+          title: 说明
+        package:
+          type: string
+          format: uri
+          title: 工具安装包
+        file_sha256:
+          type: string
+          readOnly: true
+          title: SHA-256
+        file_size:
+          type: integer
+          readOnly: true
+          title: 文件大小
+        is_active:
+          type: boolean
+          title: 允许下载
+        download_token:
+          type: string
+          format: uuid
+          readOnly: true
+          title: 下载令牌
+        download_url:
+          type: string
+          readOnly: true
+        download_count:
+          type: integer
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: 创建人
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    ProductModule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        code:
+          type: string
+          title: 模块编码
+          maxLength: 64
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          title: 模块名称
+          maxLength: 120
+        description:
+          type: string
+          title: 说明
+        is_active:
+          type: boolean
+          title: 启用
+      required:
+      - code
+      - created_at
+      - id
+      - name
+      - updated_at
+    PublicTestTool:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          title: 工具名称
+          maxLength: 120
+        version:
+          type: string
+          title: 版本号
+          maxLength: 40
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/TestToolPlatformEnum'
+          title: 平台
+        description:
+          type: string
+          title: 说明
+        file_sha256:
+          type: string
+          readOnly: true
+          title: SHA-256
+        file_size:
+          type: integer
+          readOnly: true
+          title: 文件大小
+        download_url:
+          type: string
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - download_url
+      - file_sha256
+      - file_size
+      - id
+      - name
+      - platform
+      - updated_at
+      - version
+    Release:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        version:
+          type: string
+          title: 版本号
+          maxLength: 40
+        product_type:
+          allOf:
+          - $ref: '#/components/schemas/ReleaseProductTypeEnum'
+          default: pc
+          title: 产品端类型
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/ReleasePlatformEnum'
+          title: 平台
+        architecture:
+          allOf:
+          - $ref: '#/components/schemas/ArchitectureEnum'
+          default: x64
+          title: 架构
+        channel:
+          allOf:
+          - $ref: '#/components/schemas/ChannelEnum'
+          default: stable
+          title: 渠道
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ReleaseStatusEnum'
+          title: 状态
+        package:
+          type: string
+          format: uri
+          nullable: true
+          title: 安装包
+        file_sha256:
+          type: string
+          readOnly: true
+          title: SHA-256
+        file_size:
+          type: integer
+          readOnly: true
+          title: 文件大小
+        changelog:
+          type: string
+          title: 更新日志
+        force_update:
+          type: boolean
+          title: 强制更新
+        minimum_supported_version:
+          type: string
+          title: 最低支持版本
+          maxLength: 40
+        rollout_percentage:
+          type: integer
+          maximum: 100
+          minimum: 0
+          title: 灰度比例
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+          title: 发布时间
+        download_token:
+          type: string
+          format: uuid
+          readOnly: true
+          title: 下载令牌
+        download_count:
+          type: integer
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: 创建人
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - download_count
+      - download_token
+      - file_sha256
+      - file_size
+      - id
+      - platform
+      - updated_at
+      - version
+    ReleasePlatformEnum:
+      enum:
+      - windows
+      - macos
+      - linux
+      - android
+      type: string
+      description: |-
+        * `windows` - Windows
+        * `macos` - macOS
+        * `linux` - Linux
+        * `android` - Android
+    ReleaseProductTypeEnum:
+      enum:
+      - pc
+      - android
+      type: string
+      description: |-
+        * `pc` - PC 端
+        * `android` - 安卓端
+    ReleaseStatusEnum:
+      enum:
+      - draft
+      - published
+      - withdrawn
+      type: string
+      description: |-
+        * `draft` - 草稿
+        * `published` - 已发布
+        * `withdrawn` - 已撤回
+    TestTool:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          title: 工具名称
+          maxLength: 120
+        version:
+          type: string
+          title: 版本号
+          maxLength: 40
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/TestToolPlatformEnum'
+          title: 平台
+        description:
+          type: string
+          title: 说明
+        package:
+          type: string
+          format: uri
+          title: 工具安装包
+        file_sha256:
+          type: string
+          readOnly: true
+          title: SHA-256
+        file_size:
+          type: integer
+          readOnly: true
+          title: 文件大小
+        is_active:
+          type: boolean
+          title: 允许下载
+        download_token:
+          type: string
+          format: uuid
+          readOnly: true
+          title: 下载令牌
+        download_url:
+          type: string
+          readOnly: true
+        download_count:
+          type: integer
+          readOnly: true
+        created_by:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: 创建人
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - download_count
+      - download_token
+      - download_url
+      - file_sha256
+      - file_size
+      - id
+      - name
+      - package
+      - platform
+      - updated_at
+      - version
+    TestToolPlatformEnum:
+      enum:
+      - windows
+      - macos
+      - linux
+      - android
+      - universal
+      type: string
+      description: |-
+        * `windows` - Windows
+        * `macos` - macOS
+        * `linux` - Linux
+        * `android` - Android
+        * `universal` - 通用
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

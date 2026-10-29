@@ -1,0 +1,454 @@
+[
+  {
+    "lang": "en-US",
+    "theme": "modern-light",
+    "width": 1024,
+    "height": 768,
+    "device": "PupilCore",
+    "selected": [
+      {
+        "point": 3,
+        "labelMetrics": {
+          "text": "Card 3-point calibration",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "Card 3-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 5-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 9-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      },
+      {
+        "point": 5,
+        "labelMetrics": {
+          "text": "Card 5-point calibration",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "Card 3-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 5-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 9-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      },
+      {
+        "point": 9,
+        "labelMetrics": {
+          "text": "Card 9-point calibration",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "Card 3-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 5-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 9-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "passed": true
+  },
+  {
+    "lang": "en-US",
+    "theme": "deep-blue",
+    "width": 1024,
+    "height": 768,
+    "device": "PupilCore",
+    "selected": [
+      {
+        "point": 3,
+        "labelMetrics": {
+          "text": "Card 3-point calibration",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "Card 3-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 5-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 9-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      },
+      {
+        "point": 5,
+        "labelMetrics": {
+          "text": "Card 5-point calibration",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "Card 3-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 5-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 9-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      },
+      {
+        "point": 9,
+        "labelMetrics": {
+          "text": "Card 9-point calibration",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "Card 3-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 5-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 9-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "passed": true
+  },
+  {
+    "lang": "en-US",
+    "theme": "dark",
+    "width": 1024,
+    "height": 768,
+    "device": "PupilCore",
+    "selected": [
+      {
+        "point": 3,
+        "labelMetrics": {
+          "text": "Card 3-point calibration",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "Card 3-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 5-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 9-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      },
+      {
+        "point": 5,
+        "labelMetrics": {
+          "text": "Card 5-point calibration",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "Card 3-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 5-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 9-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      },
+      {
+        "point": 9,
+        "labelMetrics": {
+          "text": "Card 9-point calibration",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "Card 3-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 5-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "Card 9-point calibration",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "passed": true
+  },
+  {
+    "lang": "zh-CN",
+    "theme": "modern-light",
+    "width": 1024,
+    "height": 768,
+    "device": "PupilCore",
+    "selected": [
+      {
+        "point": 3,
+        "labelMetrics": {
+          "text": "卡片式三点校准",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "卡片式三点校准",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "卡片式五点校准",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "卡片式九点校准",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      },
+      {
+        "point": 5,
+        "labelMetrics": {
+          "text": "卡片式五点校准",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "卡片式三点校准",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "卡片式五点校准",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "卡片式九点校准",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      },
+      {
+        "point": 9,
+        "labelMetrics": {
+          "text": "卡片式九点校准",
+          "width": 180,
+          "scrollWidth": 180,
+          "controlWidth": 192,
+          "left": 803,
+          "right": 995
+        },
+        "menuLabels": [
+          {
+            "text": "卡片式三点校准",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "卡片式五点校准",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          },
+          {
+            "text": "卡片式九点校准",
+            "width": 145,
+            "scrollWidth": 145,
+            "right": 990,
+            "left": 808
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "passed": true
+  }
+]

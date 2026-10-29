@@ -1,0 +1,68 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${LICENSE_DOMAIN};
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${LICENSE_DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/${LICENSE_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${LICENSE_DOMAIN}/privkey.pem;
+    ssl_session_cache shared:UST_TLS:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    client_max_body_size ${NGINX_MAX_BODY_SIZE};
+    client_body_timeout 300s;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "same-origin" always;
+
+    location /static/ {
+        alias /var/www/static/;
+        access_log off;
+        # unfold 静态文件无版本 hash（未启用 ManifestStaticFilesStorage），
+        # 不能用 immutable，否则代码更新后浏览器仍命中旧缓存。
+        expires 1h;
+        add_header Cache-Control "public, max-age=3600";
+    }
+
+    # 大文件下载专用：仅允许通过 X-Accel-Redirect 内部跳转访问（Django 鉴权后）。
+    # nginx 直接 sendfile 发 /var/www/media 下的安装包，绕开 gunicorn worker 超时。
+    location /internal-download/ {
+        internal;
+        alias /var/www/media/;
+        sendfile on;
+        sendfile_max_chunk 1m;
+    }
+
+    location / {
+        proxy_pass http://app:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Request-ID $http_x_request_id;
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 180s;
+        proxy_read_timeout 180s;
+        proxy_buffering off;
+    }
+}

@@ -1,0 +1,37 @@
+{
+  "pye3d": {
+    "revision": "eb50e384ce131e2a27e0de058c25fa16254c63ed",
+    "version": "0.3.2+mrt.eb50e384ce13",
+    "url": "https://codeload.github.com/pupil-labs/pye3d-detector/tar.gz/eb50e384ce131e2a27e0de058c25fa16254c63ed",
+    "sha256": "f22976fa3e0794605efaafc714dd789d4836bd5223d2c3df070783a266b525e3",
+    "license": "LGPL-3.0",
+    "reason": "The PyPI 0.3.2 sdist bundles an All Rights Reserved license; use the upstream relicensed revision instead."
+  },
+  "pupil-detectors": {
+    "version": "2.0.2",
+    "url": "https://files.pythonhosted.org/packages/6a/28/f6f27580cf7fea0f37b590c41c55090358f175299ba700cccf51d75e2477/pupil_detectors-2.0.2.tar.gz",
+    "sha256": "7e920435657e30e52eb136c10e3a116eaabcf7acd4b0a301f9a4ef4105415184",
+    "filename": "pupil_detectors-2.0.2.tar.gz"
+  },
+  "pupil-labs-uvc": {
+    "version": "1.0.7",
+    "revision": "8044e2eaac96f1f23c41ed799ef56c7fd147b15f",
+    "url": "https://codeload.github.com/pupil-labs/pyuvc/tar.gz/8044e2eaac96f1f23c41ed799ef56c7fd147b15f",
+    "sha256": "eaecf4435c5470bce9f93370b60f9be0d374324a0c436351b50f528f6f4f2d75",
+    "filename": "pyuvc-8044e2eaac96f1f23c41ed799ef56c7fd147b15f.tar.gz"
+  },
+  "libusb": {
+    "revision": "ebfec61f0a283a7b2b4844b59b9029c9b9e1563d",
+    "url": "https://codeload.github.com/pupil-labs/libusb/tar.gz/ebfec61f0a283a7b2b4844b59b9029c9b9e1563d",
+    "filename": "libusb-ebfec61f0a283a7b2b4844b59b9029c9b9e1563d.tar.gz",
+    "sha256": "8e68a23d955625deb097deae5f9ee5f383e5baacd299ab86de1533f5afd95d65",
+    "sourceFor": "pupil-labs-uvc 1.0.7 submodule"
+  },
+  "libuvc": {
+    "revision": "47cdb6a63b08878d6bccadc4665c6660b6f99911",
+    "url": "https://codeload.github.com/pupil-labs/libuvc/tar.gz/47cdb6a63b08878d6bccadc4665c6660b6f99911",
+    "filename": "libuvc-47cdb6a63b08878d6bccadc4665c6660b6f99911.tar.gz",
+    "sha256": "7f39047a3c0baba73dcc18eaa806e30c01533e51af98a24eb0ba1c20956f9ff6",
+    "sourceFor": "pupil-labs-uvc 1.0.7 submodule"
+  }
+}

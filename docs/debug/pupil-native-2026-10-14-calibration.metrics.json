@@ -1,0 +1,64 @@
+{
+  "source_sha256": "a60cd2de2989bfa77aac1b9866f9f57ceddab6924ed853bc470da5c131b4a3f6",
+  "source": "pupil/experiments/pupil_1791428089317/recordings/pupil_5f258bd5d532_20261014_121919.pupil/calibration.msgpack",
+  "unit": "source_pixels",
+  "independent_accuracy_measured": false,
+  "meaning": "Training reprojection only; identical saved poses and input pairs, no refit or correction",
+  "matched_observations": 89,
+  "reference_centers": [
+    [
+      0.5238128980000814,
+      0.36594330822979965
+    ],
+    [
+      0.22451809008916218,
+      0.37523805265073423
+    ],
+    [
+      0.5797212886810302,
+      0.7506115871005589
+    ]
+  ],
+  "comparisons": {
+    "legacy_mixed_depth": {
+      "binocular": {
+        "samples": 89,
+        "mean_error_px": 20.297809476436164,
+        "p95_error_px": 32.646274963577284,
+        "max_error_px": 34.11805616573423
+      },
+      "left": {
+        "samples": 89,
+        "mean_error_px": 594.4604138186286,
+        "p95_error_px": 732.9843664180438,
+        "max_error_px": 735.6381019630572
+      },
+      "right": {
+        "samples": 89,
+        "mean_error_px": 681.313802013827,
+        "p95_error_px": 898.4310145547364,
+        "max_error_px": 921.0949929545977
+      }
+    },
+    "fixed_model_depth": {
+      "binocular": {
+        "samples": 89,
+        "mean_error_px": 20.297809476436164,
+        "p95_error_px": 32.646274963577284,
+        "max_error_px": 34.11805616573423
+      },
+      "left": {
+        "samples": 89,
+        "mean_error_px": 8.077488021277343,
+        "p95_error_px": 24.70975609260755,
+        "max_error_px": 34.8438863736901
+      },
+      "right": {
+        "samples": 89,
+        "mean_error_px": 7.898128334276993,
+        "p95_error_px": 14.50404414490022,
+        "max_error_px": 16.680185011139216
+      }
+    }
+  }
+}

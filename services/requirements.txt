@@ -1,0 +1,6 @@
+numpy
+opencv-python
+mss
+dxcam==0.3.0; sys_platform == "win32"
+websockets
+mediapipe

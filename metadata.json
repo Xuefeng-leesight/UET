@@ -1,0 +1,8 @@
+{
+  "name": "MRT-Manager",
+  "description": "A sophisticated desktop-style management interface for projects and subjects with dynamic field management.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

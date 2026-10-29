@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UET-SA · 第一轮 UI 精修对照</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#f3f5f8;color:#172033;font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+  header{padding:20px 24px 16px;background:white;border-bottom:1px solid #dce2ea}h1{margin:0 0 6px;font-size:21px;font-weight:650}p{margin:6px 0;color:#526277}main{padding:16px 24px 28px}
+  .toolbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px}.group{display:flex;gap:6px;align-items:center}button,a{font:inherit}button{min-height:34px;padding:6px 12px;border:1px solid #ccd6e1;background:white;color:#35445a;border-radius:6px;cursor:pointer}button:hover{border-color:#526277}button[aria-pressed=true]{background:#0369a1;border-color:#0369a1;color:white}button:focus-visible,a:focus-visible{outline:2px solid #0369a1;outline-offset:3px}.note{padding:10px 12px;background:white;border:1px solid #dce2ea;border-radius:6px;margin-bottom:14px;color:#35445a}
+  .images{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}.images[data-view=both]{grid-template-columns:repeat(2,minmax(0,1fr))}figure{margin:0;min-width:0;border:1px solid #ccd6e1;border-radius:7px;background:white;overflow:hidden}figcaption{padding:8px 12px;font-size:12px;color:#526277;border-bottom:1px solid #dce2ea;display:flex;justify-content:space-between}img{display:block;width:100%;height:auto}.viewport{overflow:auto}.actual img{width:1440px;max-width:none}a{color:#0369a1;text-underline-offset:3px}footer{padding:18px 0 0;font-size:12px;color:#526277}label{display:flex;align-items:center;gap:6px;color:#526277;font-size:12px}[hidden]{display:none!important}
+  @media(max-width:800px){header{padding:16px}main{padding:14px}.images[data-view=both]{grid-template-columns:minmax(0,1fr)}}
+</style>
+<header>
+  <h1>UET-SA · 第一轮 UI 精修</h1>
+  <p>保留专业软件的紧凑布局，调整字号与对比度、操作主次、控件一致性和复杂面板分组。</p>
+</header>
+<main>
+  <div class="toolbar">
+    <div class="group" role="group" aria-label="页面">
+      <button data-page="project" aria-pressed="true">工程管理</button>
+      <button data-page="recording" aria-pressed="false">实验录制</button>
+      <button data-page="subject" aria-pressed="false">受试者弹窗</button>
+    </div>
+    <div class="group" role="group" aria-label="对照方式">
+      <button data-view="before" aria-pressed="false">精修前</button>
+      <button data-view="after" aria-pressed="true">精修后</button>
+      <button data-view="both" aria-pressed="false">并排对照</button>
+    </div>
+    <label><input id="actual" type="checkbox">按原始像素查看</label>
+  </div>
+  <div class="note" id="note" aria-live="polite"></div>
+  <div class="images" data-view="after" id="images">
+    <figure id="before" hidden><figcaption>精修前 · 原有界面<a id="beforeLink" target="_blank" rel="noopener">打开原图</a></figcaption><div class="viewport"><img id="beforeImage" alt="精修前的工程管理界面"></div></figure>
+    <figure id="after"><figcaption>精修后 · 当前代码<a id="afterLink" target="_blank" rel="noopener">打开原图</a></figcaption><div class="viewport"><img id="afterImage" alt="精修后的工程管理界面"></div></figure>
+  </div>
+  <footer>以上为真实页面截图，使用隔离的示例工程与未连接设备状态。浅色、深色、深蓝主题及中英文、1024–1440px 窗口组合已检查。<a href="recording-dark-english.png" target="_blank" rel="noopener">查看英文深色窄窗口</a>。硬件采集仍需真机验收。</footer>
+</main>
+<script>
+  const pages={project:{name:'工程管理',note:'表单标签提高对比度；统一 36px 控件；辅助操作与危险操作分组；窄窗口底部操作区保持两行。'},recording:{name:'实验录制',note:'保留原画布和 320px 录制面板；增加分组标题与分隔线；突出校准结果；统一主次按钮与紧凑数据标签。'},subject:{name:'受试者弹窗',note:'统一标题、表单和按钮的尺寸与间距；弱化次要操作；提高标签、提示和关闭控件的可辨识度。'}};
+  let page='project',view='after';
+  function render(){
+    for(const button of document.querySelectorAll('[data-page]'))button.setAttribute('aria-pressed',String(button.dataset.page===page));
+    for(const button of document.querySelectorAll('button[data-view]'))button.setAttribute('aria-pressed',String(button.dataset.view===view));
+    for(const state of ['before','after']){const file=page+'-'+state+'.png';document.getElementById(state).hidden=view!=='both'&&view!==state;document.getElementById(state+'Image').src=file;document.getElementById(state+'Image').alt=(state==='before'?'精修前的':'精修后的')+pages[page].name+'界面';document.getElementById(state+'Link').href=file;}
+    document.getElementById('images').dataset.view=view;document.getElementById('note').textContent=pages[page].note;
+  }
+  for(const button of document.querySelectorAll('[data-page]'))button.addEventListener('click',()=>{page=button.dataset.page;render()});
+  for(const button of document.querySelectorAll('button[data-view]'))button.addEventListener('click',()=>{view=button.dataset.view;render()});
+  document.getElementById('actual').addEventListener('change',e=>document.getElementById('images').classList.toggle('actual',e.target.checked));
+  render();
+</script>
+</html>
