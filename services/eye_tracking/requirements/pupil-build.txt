@@ -1,0 +1,4 @@
+# Build in a Pupil-only environment on the destination OS, never the vendor SDK environment.
+-r pupil-native.txt
+PyInstaller==6.22.3
+pyinstaller-hooks-contrib==2026.7

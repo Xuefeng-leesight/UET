@@ -1,0 +1,220 @@
+{
+  "version": 2,
+  "models": {
+    "HH_ET10C": "et10/bin/windows/x64",
+    "HH_ET28": "et28/bin/windows/x64"
+  },
+  "runtime": [
+    {
+      "path": "et10/bin/windows/x64/WinUvcCtrl.dll",
+      "bytes": 175616,
+      "sha256": "c3f4e88313f5c8c0517ed32042d03a2a9f550730deb1aaef6d6653d80c983699",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/circleDetectAlg.dll",
+      "bytes": 20241408,
+      "sha256": "e8e2db080c9810e7474e4263cbe53a89e3b13faac5eb575d662793801a01a20c",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/concrt140.dll",
+      "bytes": 322560,
+      "sha256": "4f500992a53c41a0ba44a11c33c481d8763505a7453be12d85107856ab8fb332",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/et10c_interface.dll",
+      "bytes": 165888,
+      "sha256": "cb3ce0484efa302e28000f1043ea9fa41cd9793dccd7ba59ae2f0ba2ffefe82f",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/everlogger.dll",
+      "bytes": 29696,
+      "sha256": "b908e3a232e1388562d4304cbde048f3302682a9d823dd92e096fed698a187ae",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/eyedect.dll",
+      "bytes": 8589824,
+      "sha256": "b09bc48ef3c8d91b7856e96c95dbf5b97dd041c7434163f4a63f4ee5c7a35636",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/face_iris_sdk.dll",
+      "bytes": 1426432,
+      "sha256": "8034483cf23548350e78b9ebbdca40ecf06914830106c241de75d376ab454c61",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/face_rec.dll",
+      "bytes": 23622656,
+      "sha256": "7efd441c9c3c0eb97ec39dc108398fdee751a3b3632b25dd2583293a71cde1e3",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/iris_rec.dll",
+      "bytes": 9022976,
+      "sha256": "864bcdbdbd488d979e744b8f8a83c13d1d26501bdd902a858db560b1a2fa35c9",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/libusb-1.0.dll",
+      "bytes": 174080,
+      "sha256": "4bbcb22aa49ac2280e489da2c6855b82c439346644c4818bedbce84848d4898b",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/msvcp140.dll",
+      "bytes": 575056,
+      "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/ncnn.dll",
+      "bytes": 4925952,
+      "sha256": "1f68ba61049e06afe748ae35bbb4483681cf5b42171b478835a73158929b8000",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/opencv_world455.dll",
+      "bytes": 74661376,
+      "sha256": "f134afc9ebc68a1812b9abb25ef0cc0e1b001c03d2ec974362fafcbe384eac4d",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/remoteTrackerPro.dll",
+      "bytes": 19002880,
+      "sha256": "8dbb82368a8aa30b355e8928861184e927b6987b22ea5130a85f52d3e33cb819",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/sqlite3.dll",
+      "bytes": 3163648,
+      "sha256": "c19d3e7e83063012d28bc8b5628a83503160ba997bd6162ab03b825425d417cd",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/testnoopencv.dll",
+      "bytes": 9016832,
+      "sha256": "b2d5c23942aa4b52e917da740827debe3765b29e31848d922927cd32b8dcc26a",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/tracker.xml",
+      "bytes": 4531191,
+      "sha256": "24f1fc3b7269d21f3039bc7217f536638e626d7bc6507eb8c03cd714cdc273bb",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/turbojpeg.dll",
+      "bytes": 1252864,
+      "sha256": "d472792fec8afcf0adad4e41a3e671885a07fcca47e7b5cb07d50b812293274a",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/vcruntime140.dll",
+      "bytes": 119888,
+      "sha256": "02c6aa0e6e624411a9f19b0360a7865ab15908e26024510e5c38a9c08362c35a",
+      "status": "required_keep"
+    },
+    {
+      "path": "et10/bin/windows/x64/vcruntime140_1.dll",
+      "bytes": 49640,
+      "sha256": "7dd9aa02e271c68ca6d5f18d651d23a15d7259715af43326578f7dde27f37637",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/ET20gTracker.dll",
+      "bytes": 17795072,
+      "sha256": "2a9cfe911ad0188d4ef6e18bb7b7396817e0cafbb74792ac78cafa523eaf86af",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/concrt140.dll",
+      "bytes": 322560,
+      "sha256": "4f500992a53c41a0ba44a11c33c481d8763505a7453be12d85107856ab8fb332",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/et28_interface.dll",
+      "bytes": 199168,
+      "sha256": "66b8f9822a6c849ddd5edd2ba155d5b6605597bbc5d90ca70e1bd9869ae3b1e5",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/libusb-1.0.dll",
+      "bytes": 173056,
+      "sha256": "82031a6198fad16223674300a32b57e04ef62931ad0d2c50af471f78788d1cbb",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/msvcp140.dll",
+      "bytes": 575056,
+      "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/ncnn.dll",
+      "bytes": 4925952,
+      "sha256": "1f68ba61049e06afe748ae35bbb4483681cf5b42171b478835a73158929b8000",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/opencv_world455.dll",
+      "bytes": 74661376,
+      "sha256": "f134afc9ebc68a1812b9abb25ef0cc0e1b001c03d2ec974362fafcbe384eac4d",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/pthreadVC2.dll",
+      "bytes": 82944,
+      "sha256": "0e6af724609ef6846982ef717013426c359c455fff324e906d8d55c8bb88d16e",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/uniformLibUvc.dll",
+      "bytes": 238080,
+      "sha256": "348b34ead3291e93611f8c27350aef7cc40ec64863c07d105da7c597147d2731",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/vcruntime140.dll",
+      "bytes": 119888,
+      "sha256": "02c6aa0e6e624411a9f19b0360a7865ab15908e26024510e5c38a9c08362c35a",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/vcruntime140_1.dll",
+      "bytes": 49640,
+      "sha256": "7dd9aa02e271c68ca6d5f18d651d23a15d7259715af43326578f7dde27f37637",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28/bin/windows/x64/vulkan-1.dll",
+      "bytes": 1095280,
+      "sha256": "f24d07b13e8593a85b6d51b7debb115ca994e34feab8aef2821b7ca616043185",
+      "status": "required_keep"
+    }
+  ],
+  "reference_only": [
+    "et10/samples/et10c_gaze",
+    "et10/samples/examples",
+    "et10/samples/tests",
+    "et10/samples/scripts",
+    "et28/samples/et28_dll.py",
+    "et28/samples/et28_interface.py",
+    "et28/samples/demo_ui.py",
+    "et28/samples/selfcheck.py"
+  ],
+  "removable_generated": [
+    "**/__pycache__",
+    "**/*.pyc",
+    "**/.DS_Store",
+    "**/hhlog.txt",
+    "**/cablic.dat",
+    "**/selfcheck_report.txt"
+  ],
+  "note": "Runtime binaries preserved byte-for-byte; samples are development references excluded from installers. Generated logs, caches and sample calibration data removed. Windows hardware acceptance pending."
+}

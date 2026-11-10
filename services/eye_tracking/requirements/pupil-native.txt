@@ -1,0 +1,11 @@
+# Dedicated native environment. Do not install alongside opencv-python-headless.
+-r ../adapters/pupil_core/requirements.txt
+Pillow==12.0.0
+websockets==15.0.1
+numpy>=2,<3
+opencv-python==4.13.0.92
+pupil-detectors==2.0.2
+# pye3d is installed from a hash-pinned LGPL source by scripts/install-pupil-native.py.
+sortedcontainers==2.4.0
+pupil-labs-uvc==1.0.7
+scipy>=1.13,<2

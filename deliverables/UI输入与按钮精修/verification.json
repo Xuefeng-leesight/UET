@@ -1,0 +1,114 @@
+[
+  {
+    "theme": "modern-light",
+    "lang": "zh-CN",
+    "w": 1440,
+    "h": 1000,
+    "count": 18,
+    "focus": {
+      "border": "0px",
+      "outline": "solid",
+      "shadow": "rgba(50, 107, 181, 0.18) 0px 0px 0px 3px"
+    },
+    "primaryStyle": {
+      "bg": "rgb(50, 107, 181)",
+      "color": "rgb(255, 255, 255)",
+      "h": 32,
+      "r": "8px",
+      "b": "0px"
+    },
+    "textarea": {
+      "small": 96,
+      "tall": {
+        "h": 288,
+        "overflow": "auto",
+        "scroll": 562
+      }
+    },
+    "passed": true
+  },
+  {
+    "theme": "dark",
+    "lang": "zh-CN",
+    "w": 1440,
+    "h": 1000,
+    "count": 18,
+    "focus": {
+      "border": "0px",
+      "outline": "solid",
+      "shadow": "rgba(138, 174, 224, 0.22) 0px 0px 0px 3px"
+    },
+    "primaryStyle": {
+      "bg": "rgb(64, 111, 174)",
+      "color": "rgb(255, 255, 255)",
+      "h": 32,
+      "r": "8px",
+      "b": "0px"
+    },
+    "textarea": {
+      "small": 96,
+      "tall": {
+        "h": 288,
+        "overflow": "auto",
+        "scroll": 562
+      }
+    },
+    "passed": true
+  },
+  {
+    "theme": "modern-light",
+    "lang": "en-US",
+    "w": 1024,
+    "h": 768,
+    "count": 18,
+    "focus": {
+      "border": "0px",
+      "outline": "solid",
+      "shadow": "rgba(50, 107, 181, 0.18) 0px 0px 0px 3px"
+    },
+    "primaryStyle": {
+      "bg": "rgb(50, 107, 181)",
+      "color": "rgb(255, 255, 255)",
+      "h": 32,
+      "r": "8px",
+      "b": "0px"
+    },
+    "textarea": {
+      "small": 96,
+      "tall": {
+        "h": 288,
+        "overflow": "auto",
+        "scroll": 562
+      }
+    },
+    "passed": true
+  },
+  {
+    "theme": "dark",
+    "lang": "en-US",
+    "w": 1024,
+    "h": 768,
+    "count": 18,
+    "focus": {
+      "border": "0px",
+      "outline": "solid",
+      "shadow": "rgba(138, 174, 224, 0.22) 0px 0px 0px 3px"
+    },
+    "primaryStyle": {
+      "bg": "rgb(64, 111, 174)",
+      "color": "rgb(255, 255, 255)",
+      "h": 32,
+      "r": "8px",
+      "b": "0px"
+    },
+    "textarea": {
+      "small": 96,
+      "tall": {
+        "h": 288,
+        "overflow": "auto",
+        "scroll": 562
+      }
+    },
+    "passed": true
+  }
+]

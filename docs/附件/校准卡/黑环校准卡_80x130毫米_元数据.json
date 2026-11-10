@@ -1,0 +1,25 @@
+{
+  "card_size_mm": [
+    80.0,
+    130.0
+  ],
+  "template_size": [
+    800,
+    1300
+  ],
+  "fiducial_type": "black_center_ring_only",
+  "target_center_template": [
+    400.0,
+    355
+  ],
+  "target_center_normalized": [
+    0.5,
+    0.27307692307692305
+  ],
+  "black_ring": {
+    "outer_radius_template": 190,
+    "inner_radius_template": 86,
+    "dot_radius_template": 28
+  },
+  "note": "Minimal white card with black annulus. Best visual design and more robust than blue color thresholding, but no ID/corner geometry."
+}

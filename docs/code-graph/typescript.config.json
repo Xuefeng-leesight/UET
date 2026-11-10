@@ -1,0 +1,12 @@
+{
+  "language": "typescript",
+  "include": ["src/**/*.ts", "src/**/*.tsx", "electron/**/*.ts", "shared/**/*.ts"],
+  "exclude": ["**/*.d.ts", "**/*.test.*", "**/*.spec.*"],
+  "entryPoints": [
+    { "type": "file", "pattern": "src/main.tsx" },
+    { "type": "file", "pattern": "electron/main.ts" },
+    { "type": "file", "pattern": "electron/preload.ts" }
+  ],
+  "typescript": { "tsconfig": "./tsconfig.json" },
+  "output": "docs/code-graph/typescript.json"
+}

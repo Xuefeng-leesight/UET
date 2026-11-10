@@ -1,0 +1,96 @@
+# IP 访问专用部署（纯 HTTP，不用 HTTPS / nginx 证书 / certbot）。
+# 与 docker-compose.prod.yml（域名 + HTTPS）并存，二者互不影响。
+# 启动：复制 .env.ip.example 为 .env.ip 并填写，然后：
+#   docker compose --env-file .env.ip -f docker-compose.ip.yml up -d --build
+# 访问：http://<服务器IP>/admin/  （80 端口）
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ust_license}
+      POSTGRES_USER: ${POSTGRES_USER:-ust}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env.ip 中设置 POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ust} -d ${POSTGRES_DB:-ust_license}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+    env_file:
+      - ${UST_ENV_FILE:-.env.ip}
+    environment:
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?请设置 DJANGO_SECRET_KEY}
+      # IP 访问：默认放通任意 Host；如需收紧改成逗号分隔的具体 IP。
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      # 纯 HTTP：关闭强制 HTTPS 跳转与 secure cookie，否则 http 访问会被 301 / admin 掉线。
+      DJANGO_SECURE_SSL_REDIRECT: "false"
+      DJANGO_SESSION_COOKIE_SECURE: "false"
+      DJANGO_CSRF_COOKIE_SECURE: "false"
+      DJANGO_SECURE_HSTS_SECONDS: "0"
+      LICENSE_SIGNING_PRIVATE_KEY: ${LICENSE_SIGNING_PRIVATE_KEY:?请设置 LICENSE_SIGNING_PRIVATE_KEY}
+      DEVICE_SECRET_ENCRYPTION_KEY: ${DEVICE_SECRET_ENCRYPTION_KEY:?请设置 DEVICE_SECRET_ENCRYPTION_KEY}
+      # nginx 环境启用 X-Accel-Redirect 大文件下载（sendfile 直发，绕开 gunicorn 超时）
+      DJANGO_DOWNLOAD_X_ACCEL: "true"
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-ust_license}
+      POSTGRES_USER: ${POSTGRES_USER:-ust}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请设置 POSTGRES_PASSWORD}
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000
+             --workers ${GUNICORN_WORKERS:-3} --timeout ${GUNICORN_TIMEOUT:-300}
+             --access-logfile - --error-logfile -"
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 6s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:stable-alpine
+    volumes:
+      - ./deploy/nginx/ip.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_data:/var/www/static:ro
+      - media_data:/var/www/media:ro
+    ports:
+      - "80:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:

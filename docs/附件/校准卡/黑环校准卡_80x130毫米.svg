@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="130.0mm" height="130.0mm" viewBox="0 0 1300 1300">
+  <rect x="258" y="8" width="784" height="1284" rx="38" ry="38" fill="#ffffff" stroke="#d7dce2" stroke-width="2"/>
+  <circle cx="650.0" cy="355" r="190" fill="#111827"/>
+  <circle cx="650.0" cy="355" r="86" fill="#ffffff"/>
+  <circle cx="650.0" cy="355" r="28" fill="#111827"/>
+  <text x="650" y="820" text-anchor="middle" font-family="PingFang SC, STHeiti, Microsoft YaHei, sans-serif" font-size="58" font-weight="700" fill="#111827">校准卡</text>
+  <text x="650" y="970" text-anchor="middle" font-family="PingFang SC, STHeiti, Microsoft YaHei, sans-serif" font-size="48" fill="#111827">使用距离为0.5~1米</text>
+</svg>

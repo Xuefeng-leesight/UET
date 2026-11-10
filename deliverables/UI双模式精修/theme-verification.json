@@ -1,0 +1,63 @@
+[
+  {
+    "config": {
+      "theme": "modern-light",
+      "lang": "zh-CN",
+      "w": 1440,
+      "h": 1000
+    },
+    "contrasts": {
+      "body": 14.165125687936321,
+      "muted": 4.513185171997829,
+      "link": 5.376427856839042,
+      "button": 5.376427856839042
+    },
+    "passed": true
+  },
+  {
+    "config": {
+      "theme": "dark",
+      "lang": "en-US",
+      "w": 1024,
+      "h": 768
+    },
+    "contrasts": {
+      "body": 10.952420914784975,
+      "muted": 5.005759571041321,
+      "link": 6.715541959790648,
+      "button": 6.660424938379558
+    },
+    "passed": true
+  },
+  {
+    "config": {
+      "theme": "deep-blue",
+      "lang": "zh-CN",
+      "w": 1280,
+      "h": 900
+    },
+    "contrasts": {
+      "body": 10.952420914784975,
+      "muted": 5.005759571041321,
+      "link": 6.715541959790648,
+      "button": 6.660424938379558
+    },
+    "passed": true
+  },
+  {
+    "config": {
+      "theme": "modern-light",
+      "lang": "en-US",
+      "w": 1024,
+      "h": 768,
+      "empty": true
+    },
+    "contrasts": {
+      "body": 14.165125687936321,
+      "muted": 4.513185171997829,
+      "link": 5.376427856839042,
+      "button": 5.376427856839042
+    },
+    "passed": true
+  }
+]

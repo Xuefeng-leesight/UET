@@ -1,0 +1,272 @@
+name: Eye-tracking adapter tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'electron/platform/python/**'
+      - 'electron/platform/sdk/sdkSelection.ts'
+      - 'electron/domains/project/**'
+      - 'electron/domains/recording/**'
+      - 'electron/domains/mapping/**'
+      - 'electron/domains/trigger/**'
+      - 'electron/domains/markers/**'
+      - 'shared/contracts/ipc/communication.ts'
+      - 'shared/contracts/ipc/channels.ts'
+      - 'shared/domain/communicationClock.ts'
+      - 'src/infrastructure/electron/clients/triggerClient.ts'
+      - 'src/infrastructure/electron/clients/recordsClient.ts'
+      - 'src/infrastructure/electron/ipcTypes.ts'
+      - 'src/shared/types/mrt.ts'
+      - 'src/app/settings/ThemeSettingsModal.tsx'
+      - 'src/app/settings/TriggerSerialSettings.tsx'
+      - 'tests/trigger/**'
+      - 'vite.config.ts'
+      - 'electron/domains/facial/facialHandlers.ts'
+      - 'src/features/mapping/**'
+      - 'tests/mapping/**'
+      - 'tests/analysis/**'
+      - 'tests/export/**'
+      - 'src/features/export/**'
+      - 'shared/domain/eyeExportData.ts'
+      - 'shared/domain/gazeSmoothing.ts'
+      - 'shared/constants/eyeExportColumns.ts'
+      - 'shared/domain/blinkIntervals.ts'
+      - 'shared/contracts/domain/reporting.ts'
+      - 'shared/domain/aoi/**'
+      - 'shared/contracts/domain/analysis.ts'
+      - 'src/features/records/RecordDataService.ts'
+      - 'src/modalities/**'
+      - 'src/app/layout/Sidebar.tsx'
+      - 'src/features/analysis/**'
+      - 'src/features/records/TimelineAnalysis.tsx'
+      - 'shared/domain/recordingStimulus.ts'
+      - 'shared/domain/calibrationScores.ts'
+      - 'src/features/records/RecordsListPage.tsx'
+      - 'tests/recording/**'
+      - 'src/features/projects/**'
+      - 'src/features/recording/**'
+      - 'src/app/MrtApplicationController.tsx'
+      - 'shared/contracts/domain/models.ts'
+      - 'shared/domain/projectModalities.ts'
+      - 'shared/domain/pupilAudioSync.ts'
+      - 'scripts/build-pupil-server.mjs'
+      - 'services/eye_tracking/packaging/mrt-pupil-server.spec'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'services/eye_tracking/adapters/pupil_core/**'
+      - 'services/eye_tracking/adapters/pupil_native/**'
+      - 'services/eye_tracking/requirements/pupil-native.txt'
+      - 'scripts/collect-pupil-notices.py'
+      - 'scripts/install-pupil-native.py'
+      - 'tools/pupil/benchmark_startup.py'
+      - 'services/eye_tracking/adapters/invensun_7/**'
+      - 'services/eye_tracking/adapters/huahong/**'
+      - 'services/eye_tracking/application/huahong_runtime.py'
+      - 'services/eye_tracking/transport/huahong_runtime.py'
+      - 'services/eye_tracking/domain/**'
+      - 'services/eye_tracking/application/pupil_runtime.py'
+      - 'services/eye_tracking/transport/pupil*.py'
+      - 'services/eye_tracking/infrastructure/**'
+      - 'services/eye_tracking/entrypoints/**'
+      - 'services/eye_tracking/analysis/**'
+      - 'services/eye_tracking/requirements/pupil-capture.txt'
+      - 'services/eye_tracking/requirements/pupil-build.txt'
+      - 'tests/eye_tracking/**'
+      - 'electron/domains/recording/recordCsvParser.ts'
+      - 'shared/constants/recordPoints.ts'
+      - '.github/workflows/pupil-adapter-tests.yml'
+  push:
+    paths:
+      - 'electron/platform/python/**'
+      - 'electron/platform/sdk/sdkSelection.ts'
+      - 'electron/domains/project/**'
+      - 'electron/domains/recording/**'
+      - 'electron/domains/mapping/**'
+      - 'electron/domains/trigger/**'
+      - 'electron/domains/markers/**'
+      - 'shared/contracts/ipc/communication.ts'
+      - 'shared/contracts/ipc/channels.ts'
+      - 'shared/domain/communicationClock.ts'
+      - 'src/infrastructure/electron/clients/triggerClient.ts'
+      - 'src/infrastructure/electron/clients/recordsClient.ts'
+      - 'src/infrastructure/electron/ipcTypes.ts'
+      - 'src/shared/types/mrt.ts'
+      - 'src/app/settings/ThemeSettingsModal.tsx'
+      - 'src/app/settings/TriggerSerialSettings.tsx'
+      - 'tests/trigger/**'
+      - 'vite.config.ts'
+      - 'electron/domains/facial/facialHandlers.ts'
+      - 'src/features/mapping/**'
+      - 'tests/mapping/**'
+      - 'tests/analysis/**'
+      - 'tests/export/**'
+      - 'src/features/export/**'
+      - 'shared/domain/eyeExportData.ts'
+      - 'shared/domain/gazeSmoothing.ts'
+      - 'shared/constants/eyeExportColumns.ts'
+      - 'shared/domain/blinkIntervals.ts'
+      - 'shared/contracts/domain/reporting.ts'
+      - 'shared/domain/aoi/**'
+      - 'shared/contracts/domain/analysis.ts'
+      - 'src/features/records/RecordDataService.ts'
+      - 'src/modalities/**'
+      - 'src/app/layout/Sidebar.tsx'
+      - 'src/features/analysis/**'
+      - 'src/features/records/TimelineAnalysis.tsx'
+      - 'shared/domain/recordingStimulus.ts'
+      - 'shared/domain/calibrationScores.ts'
+      - 'src/features/records/RecordsListPage.tsx'
+      - 'tests/recording/**'
+      - 'src/features/projects/**'
+      - 'src/features/recording/**'
+      - 'src/app/MrtApplicationController.tsx'
+      - 'shared/contracts/domain/models.ts'
+      - 'shared/domain/projectModalities.ts'
+      - 'shared/domain/pupilAudioSync.ts'
+      - 'scripts/build-pupil-server.mjs'
+      - 'services/eye_tracking/packaging/mrt-pupil-server.spec'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'services/eye_tracking/adapters/pupil_core/**'
+      - 'services/eye_tracking/adapters/pupil_native/**'
+      - 'services/eye_tracking/requirements/pupil-native.txt'
+      - 'scripts/collect-pupil-notices.py'
+      - 'scripts/install-pupil-native.py'
+      - 'tools/pupil/benchmark_startup.py'
+      - 'services/eye_tracking/adapters/invensun_7/**'
+      - 'services/eye_tracking/adapters/huahong/**'
+      - 'services/eye_tracking/application/huahong_runtime.py'
+      - 'services/eye_tracking/transport/huahong_runtime.py'
+      - 'services/eye_tracking/domain/**'
+      - 'services/eye_tracking/application/pupil_runtime.py'
+      - 'services/eye_tracking/transport/pupil*.py'
+      - 'services/eye_tracking/infrastructure/**'
+      - 'services/eye_tracking/entrypoints/**'
+      - 'services/eye_tracking/analysis/**'
+      - 'services/eye_tracking/requirements/pupil-capture.txt'
+      - 'services/eye_tracking/requirements/pupil-build.txt'
+      - 'tests/eye_tracking/**'
+      - 'electron/domains/recording/recordCsvParser.ts'
+      - 'shared/constants/recordPoints.ts'
+      - '.github/workflows/pupil-adapter-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-adapter:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install repository contract-test dependencies without install hooks
+        run: npm ci --ignore-scripts
+      - name: Huahong SDK migration contracts
+        run: node tests/eye_tracking/huahong/check_sdk_migration.mjs
+      - name: Mapping display and backend launch contracts
+        run: |
+          node tests/analysis/check_analysis_access.mjs
+          node tests/mapping/check_mapping_launch.mjs
+          node tests/mapping/check_mapping_display.mjs
+          node tests/mapping/check_fixation_pipeline.mjs
+      - name: Eye data accuracy and exact pupil statistics
+        run: |
+          node tests/export/check_eye_data_accuracy.mjs
+          node tests/export/check_pupil_standard_columns.mjs
+          node tests/export/check_gaze_smoothing.mjs
+          node tests/export/check_export_feedback.mjs
+          node tests/analysis/check_pupil_sample_metrics.mjs
+          node tests/analysis/check_blink_intervals.mjs
+      - name: AOI export and actual communication contracts
+        # SerialPort 13 supports Node >=20. Its published N-API prebuilds load
+        # without install hooks; these tests use the mock binding and UDP loopback.
+        run: |
+          node tests/export/check_aoi_export.mjs
+          node tests/export/check_aoi_export_ipc.mjs
+          node tests/recording/check_communication_bridge.mjs
+          node tests/recording/check_communication_start.mjs
+          node tests/trigger/check_recording_communication.mjs
+      - name: Full recording video stimulus and analysis contracts
+        run: |
+          node tests/recording/check_recording_stimulus.mjs
+          node tests/recording/check_recording_video_ui.mjs
+          node tests/recording/check_recorded_calibration_scores.mjs
+          node tests/recording/check_calibration_scores.mjs
+          node tests/recording/check_huahong_calibration_metadata.mjs
+          node tests/recording/check_huahong_visual_data.mjs
+          node tests/recording/check_huahong_recordings.mjs
+          node tests/recording/check_recording_metadata_identity.mjs
+          node scripts/check-aoi-playback-boundaries.mjs
+      - name: Install Eigen on macOS
+        if: runner.os == 'macOS'
+        run: brew install eigen
+      - name: Install Eigen on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          vcpkg install eigen3:x64-windows
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "CMAKE_PREFIX_PATH=$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows" >> $env:GITHUB_ENV
+      - name: Install isolated Python dependencies
+        shell: pwsh
+        run: |
+          python -m venv services/eye_tracking/adapters/pupil_native/.venv
+          $python = if ($IsWindows) { 'Scripts/python.exe' } else { 'bin/python' }
+          $python = Join-Path $PWD "services/eye_tracking/adapters/pupil_native/.venv/$python"
+          & $python scripts/install-pupil-native.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Split-Path $python >> $env:GITHUB_PATH
+      - name: Install FFmpeg on Windows
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg --no-progress -y
+      - name: Install FFmpeg on macOS
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+      - name: Adapter, protocol, preview and actual encoding tests
+        env:
+          MRT_REQUIRE_MEDIA_TESTS: '1'
+          MRT_REQUIRE_CONSUMER_TESTS: '1'
+        run: python -m unittest discover -s tests/eye_tracking -t . -v
+      - name: Source backend readiness with parent control pipe held open
+        shell: pwsh
+        run: |
+          python -m tools.pupil.benchmark_startup (Get-Command python).Source --source --label repeat --budget 2 --output services/build/pupil-validation/startup-source.json
+      - name: Build independent Pupil executable on the target platform
+        shell: pwsh
+        run: |
+          python -m pip install -r services/eye_tracking/requirements/pupil-build.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:MRT_PUPIL_PYTHON_BIN = (Get-Command python).Source
+          $env:MRT_FFPROBE_PATH = (Get-Command ffprobe).Source
+          npm run build:pupil-server
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build:pupil-server
+      - name: First packaged launch reaches algorithm readiness within two seconds
+        shell: pwsh
+        run: |
+          $binary = if ($IsWindows) { 'mrt-pupil-server.exe' } else { 'PupilBackend.app/Contents/MacOS/mrt-pupil-server' }
+          python -m tools.pupil.benchmark_startup "services/dist/pupil-backend/$binary" --label first-after-build --budget 2 --output services/build/pupil-validation/startup-service-first.json
+      - name: Preserve startup timing and dependency diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pupil-startup-${{ matrix.os }}
+          path: services/build/pupil-validation/startup-*.json
+          if-no-files-found: ignore
+      - name: Packaged process connects and exits through the parent pipe
+        shell: pwsh
+        run: |
+          $binary = if ($IsWindows) { 'mrt-pupil-server.exe' } else { 'PupilBackend.app/Contents/MacOS/mrt-pupil-server' }
+          $env:MRT_PUPIL_EXECUTABLE = Join-Path $PWD "services/dist/pupil-backend/$binary"
+          python -m unittest tests.eye_tracking.pupil_core.test_runtime.ProductionRuntimeTests.test_production_entrypoint_parent_pipe_shutdown tests.eye_tracking.pupil_core.test_native_boundaries.NativeBoundaryTests.test_packaged_native_fit_without_python_environment tests.eye_tracking.pupil_core.test_native_export.NativeExportTests.test_packaged_native_status_missing_camera_and_shutdown tests.eye_tracking.pupil_core.test_mapping_entrypoint.MappingEntrypointTests.test_packaged_pupil_maps_without_device_service -v
