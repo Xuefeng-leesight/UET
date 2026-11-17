@@ -121,7 +121,7 @@ export function registerCalibrationDataHandlers(dependencies: CalibrationDataDep
   const extractCalibrationBySubject = (raw: unknown, subjectIdRaw: unknown): Record<string, unknown> | null => {
     const parsed = asCalibrationObject(raw)
     if (!parsed) return null
-  
+
     const requestedSubjectId = normalizeCalibrationSubjectId(subjectIdRaw)
     const bySubject = asCalibrationObject(parsed.bySubject)
     if (!bySubject) return null
@@ -129,9 +129,32 @@ export function registerCalibrationDataHandlers(dependencies: CalibrationDataDep
     const direct = asCalibrationObject(bySubject[key])
     if (direct) return direct
     if (requestedSubjectId) return null
-  
+
     const latest = asCalibrationObject(parsed.latest)
     if (latest) return latest
+    return null
+  }
+
+  // Huahong/Pupil calibrations are device specific; older entries did not record
+  // the device, so they are never offered to these models.
+  const DEVICE_SPECIFIC_CALIBRATION_MODELS = new Set(['PupilCore', 'HH_ET10C', 'HH_ET28'])
+
+  /** The subject's calibration for one device: its own slot, else a legacy entry for other devices. */
+  const selectCalibrationForDevice = (entry: Record<string, unknown> | null, deviceModelRaw: unknown): Record<string, unknown> | null => {
+    const deviceModel = typeof deviceModelRaw === 'string' ? deviceModelRaw.trim() : ''
+    if (!entry || !deviceModel) return entry
+    const byDevice = asCalibrationObject(entry.byDevice)
+    const own = byDevice ? asCalibrationObject(byDevice[deviceModel]) : null
+    if (own) return own
+    if (entry.deviceModel === deviceModel) return entry
+    if (typeof entry.deviceModel === 'string' && entry.deviceModel) return null
+    if (!DEVICE_SPECIFIC_CALIBRATION_MODELS.has(deviceModel)) return entry
+    // Huahong tokens saved before the device was recorded name their model.
+    try {
+      const token = typeof entry.coe === 'string' ? JSON.parse(entry.coe) : null
+      if (token && typeof token === 'object' && token.model === deviceModel) return entry
+    } catch {
+    }
     return null
   }
   
@@ -156,6 +179,7 @@ export function registerCalibrationDataHandlers(dependencies: CalibrationDataDep
       const subjectKey = toCalibrationSubjectKey(resolvedSubjectId)
       const now = new Date().toISOString()
   
+      const deviceModel = typeof incomingResult.deviceModel === 'string' ? incomingResult.deviceModel.trim() : ''
       const bySubject: Record<string, Record<string, unknown>> = {}
       try {
         const existingRaw = await fs.promises.readFile(outPath, 'utf-8')
@@ -184,6 +208,15 @@ export function registerCalibrationDataHandlers(dependencies: CalibrationDataDep
       } else {
         delete nextEntry.subjectId
       }
+      // The subject entry stays the latest calibration (older readers use it);
+      // byDevice keeps each device's own, so switching devices finds the right one.
+      delete nextEntry.byDevice
+      const previousByDevice = asCalibrationObject(bySubject[subjectKey]?.byDevice) || {}
+      if (deviceModel) {
+        nextEntry.byDevice = { ...previousByDevice, [deviceModel]: { ...nextEntry } }
+      } else if (Object.keys(previousByDevice).length > 0) {
+        nextEntry.byDevice = previousByDevice
+      }
       bySubject[subjectKey] = nextEntry
   
       const store = {
@@ -202,7 +235,7 @@ export function registerCalibrationDataHandlers(dependencies: CalibrationDataDep
   })
   
   ipcMain.handle('load-calibration-result', async (_event, input: unknown) => {
-    const { experimentDir, subjectId } = asRecord(input)
+    const { experimentDir, subjectId, deviceModel } = asRecord(input)
     if (!experimentDir || typeof experimentDir !== 'string') {
       return { ok: false, result: null, message: '参数错误' }
     }
@@ -217,7 +250,7 @@ export function registerCalibrationDataHandlers(dependencies: CalibrationDataDep
     try {
       const raw = await fs.promises.readFile(inPath, 'utf-8')
       const parsed = JSON.parse(raw)
-      const selected = extractCalibrationBySubject(parsed, subjectId)
+      const selected = selectCalibrationForDevice(extractCalibrationBySubject(parsed, subjectId), deviceModel)
       return { ok: true, result: selected }
     } catch (error: unknown) {
       const code = error && typeof error === 'object' && 'code' in error ? String(error.code || '') : ''

@@ -12,10 +12,11 @@ export function buildHuahongCommand(options: {
   if (!isHuahongModel(options.env.MRT_SDK_MODEL)) throw new Error('必须指定华弘设备型号')
   const env: NodeJS.ProcessEnv = { ...options.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8',
     PYTHONUNBUFFERED: '1', PYTHONFAULTHANDLER: '1' }
-  for (const key of ['MRT_SDK_ROOT', 'MRT_TYPES_DIR', 'MRT_SOFTDOG_PWD', 'MRT_SOFTDOG_INI_PATH', 'ET10C_DLL_DIR', 'ET28_DLL_DIR']) delete env[key]
+  for (const key of ['MRT_SDK_ROOT', 'MRT_TYPES_DIR', 'MRT_SOFTDOG_PWD', 'MRT_SOFTDOG_INI_PATH', 'ET10C_DLL_DIR', 'ET28_DLL_DIR', 'AIOTGLASS_SDK_DIR']) delete env[key]
   const repo = path.resolve(options.appDir, '..')
   const sdk = path.join(options.packaged ? options.resourcesPath : repo, 'SDK/huahong')
-  const dll = path.join(sdk, options.env.MRT_SDK_MODEL === 'HH_ET10C' ? 'et10/bin/windows/x64/et10c_interface.dll' : 'et28/bin/windows/x64/et28_interface.dll')
+  const dll = path.join(sdk, options.env.MRT_SDK_MODEL === 'HH_ET10C' ? 'et10/bin/windows/x64/et10c_interface.dll'
+    : 'et28-aiot/bin/windows/x64/AiotGlassEyeTrackerInterface.dll')
   if (!fs.existsSync(dll)) throw new Error(`华弘运行库缺失: ${dll}`)
   if (!env.MRT_HUAHONG_PROJECT_ROOT) throw new Error('请先打开已授权的华弘工程')
   // File pages send "file://" as the WebSocket Origin; keep "null" for other file-origin clients.

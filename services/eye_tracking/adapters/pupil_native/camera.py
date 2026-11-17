@@ -14,11 +14,34 @@ def source_clock():
     return time.perf_counter() if sys.platform == 'win32' else time.monotonic()
 
 
+# ID2 is the scene camera, ID0 the right eye, ID1 the left eye. Listed in the
+# order the message names them (shared with the ET28 wording and its translations).
+CAMERA_ROLE_NAMES = ((2, '场景'), (1, '左眼'), (0, '右眼'))
+
+
+class MissingCameras(ValueError):
+    """Some Pupil cameras are not listed (yet); the caller may wait and retry."""
+
+    def __init__(self, missing):
+        self.missing = missing
+        super().__init__(f"Pupil 未找到{'、'.join(missing)}摄像头")
+
+    def with_wait(self, seconds):
+        return ValueError(f"Pupil 未找到{'、'.join(self.missing)}摄像头（已等待 {seconds} 秒）；"
+                          "需要场景、左眼、右眼三个摄像头都已连接")
+
+
 def select_devices(devices, uids=()):
     selected = {}
+    found = {}
     for role in (0, 1, 2):
-        candidates = [d for d in devices if (d['uid'] == uids[role] if uids else
-                      re.fullmatch(rf'Pupil Cam[123] ID{role}', d.get('name', '')))]
+        found[role] = [d for d in devices if (d['uid'] == uids[role] if uids else
+                       re.fullmatch(rf'Pupil Cam[123] ID{role}', d.get('name', '')))]
+    missing = [name for role, name in CAMERA_ROLE_NAMES if not found[role]]
+    if missing:
+        raise MissingCameras(missing)
+    for role in (0, 1, 2):
+        candidates = found[role]
         if len(candidates) != 1:
             raise ValueError(f'Pupil 原生采集：ID{role} 相机数量为 {len(candidates)}，需要唯一的双眼及场景相机；检查 USB、驱动或设备 UID 配置')
         selected[role] = candidates[0]

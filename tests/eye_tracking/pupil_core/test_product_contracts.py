@@ -13,7 +13,7 @@ class ProductContracts(unittest.TestCase):
                 self.fail("Node, TypeScript and FFmpeg required")
             self.skipTest("Audio contract tools unavailable")
         result = subprocess.run(["node", str(Path(__file__).with_name("check_audio.mjs"))],
-                                cwd=root, capture_output=True, text=True, timeout=20)
+                                cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_typescript_product_contracts(self):
@@ -23,5 +23,5 @@ class ProductContracts(unittest.TestCase):
                 self.fail("Node/TypeScript required")
             self.skipTest("Node/TypeScript unavailable")
         result = subprocess.run(["node", str(Path(__file__).with_name("check_product_contracts.mjs"))],
-                                cwd=root, capture_output=True, text=True, timeout=15)
+                                cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

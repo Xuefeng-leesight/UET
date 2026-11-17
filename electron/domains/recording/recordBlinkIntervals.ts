@@ -11,8 +11,9 @@ export function createRecordedBlinkCollector(headers: string[]) {
   const read = (parts: string[], name: string) => String(parts[indexes.get(name) ?? -1] ?? '').trim();
   return {
     addRow(parts: string[]) {
-      if (read(parts, 'source_model') !== 'PupilCore') return;
-      observedSource = true;
+      const model = read(parts, 'source_model');
+      if (model !== 'PupilCore' && model !== 'HH_ET28') return;
+      if (model === 'PupilCore' || read(parts, 'source_event_type') === 'blink') observedSource = true;
       // Old Pupil CSVs have no explicit pair schema. Their coverage stays
       // unknown rather than falling back to a synthetic zero/point duration.
       if (!hasSchema) return;

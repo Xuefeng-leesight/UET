@@ -16,7 +16,7 @@ from ...domain.capabilities import DeviceCapabilities
 from ...domain.contracts import EyeTrackingError
 from ...domain.samples import GazeSample, SampleIdentity, VideoFrame
 from .et28_eye_preview import ET28EyePreview
-from .et28_samples import et28_gaze_sample
+from .et28_samples import aiot_gaze_sample
 
 MODELS = ('HH_ET10C', 'HH_ET28')
 # ET28's bundled C++ Mark/SCEEN examples allow ten seconds for native sampling.
@@ -77,8 +77,7 @@ class HuahongService:
         self.last_gaze = 0.0
         self.tracking_started = 0.0
         self.tracker = None
-        self.lib = None
-        self.callbacks = []
+        self._et28 = None
         self.worker = None
         self.tracking = False
         self.shape = None
@@ -214,75 +213,62 @@ class HuahongService:
             raise
 
     def _connect_et28(self):
-        from .vendor import et28_dll as b
-        dll = self.root / 'et28/bin/windows/x64'
-        if not (dll / 'et28_interface.dll').is_file():
-            raise EyeTrackingError('Missing ET28 runtime DLL')
-        os.environ['ET28_DLL_DIR'] = str(dll)
-        self.lib = b.library()
-        checked(self.lib.et28_device_init(), 'device_init')
-        self.versions = {'sdk': (self.lib.et28_getGzSdkVersion() or b'').decode('utf-8', errors='replace')}
-        connect = b.DeviceStatusCallback(lambda _: None)
-        disconnect = b.DeviceStatusCallback(lambda _: setattr(self, 'failure', 'Device disconnected'))
-        self.callbacks.extend((connect, disconnect))
-        self.lib.et28_registerDeviceStatusCallback(connect, disconnect, None)
-        checked(self.lib.et28_device_connect(), 'device_connect')
-        params, count = (b.et28_CameraPara * 20)(), C.c_uint32()
-        checked(self.lib.et28_getCamera_para(params, 20, C.byref(count)), 'getCamera_para')
-        if not 0 < count.value <= 20:
-            raise EyeTrackingError('Invalid camera parameter count')
-        candidates = params[:count.value]
-        logging.info('huahong.et28 camera_candidates=%s', [b.camera_para_to_dict(p) for p in candidates])
-        # Legacy huahong.json camera overrides must not silently restore the
-        # previous 1600/Normal profile. Keep the selected native struct intact
-        # so its IR dimensions, FPS and FoV remain the device's enumerated values.
+        from .aiot_et28 import AiotET28
+
+        native = AiotET28(self.root / 'et28-aiot/bin/windows/x64')
+        self._et28 = native
+
+        def active():
+            return self._et28 is native and self.state in ('connecting', 'ready')
+
+        def disconnected(_):
+            if active():
+                self.failure = 'Device disconnected'
+
+        native.open(disconnected)
+        self.versions = native.versions()
         legacy = {key: self.config[key] for key in ('world_width', 'crop_type') if key in self.config}
         if legacy:
             logging.info('huahong.et28 fixed_camera_profile=%s ignored_legacy_camera_config=%s',
                          ET28_WORLD_PROFILE, legacy)
-        match = next((p for p in candidates
-                      if (p.m_worldWidth, p.m_worldHeight, p.m_worldCameraCropType) == ET28_WORLD_PROFILE), None)
-        if match is None:
-            raise EyeTrackingError('ET28 requires 1920x1080 with center crop (crop_type=1); device does not offer this profile')
-        checked(self.lib.et28_setCamera_para(C.byref(match)), 'setCamera_para')
-        logging.info('huahong.et28 camera_parameters=%s', b.camera_para_to_dict(match))
-        # The supplied Python demo sets IR brightness to seven after connecting.
-        brightness_result = self.lib.et28_setIrLedBrightness(7)
-        logging.info('huahong.et28 ir_led brightness=7 result=%s', brightness_result)
-        checked(brightness_result, 'setIrLedBrightness')
+        match = native.configure_camera(ET28_WORLD_PROFILE)
         width, height = match.m_worldWidth, match.m_worldHeight
-        if not (0 < width <= 8192 and 0 < height <= 8192 and width * height * 3 <= 32 * 1024 * 1024):
-            raise EyeTrackingError('Invalid scene dimensions')
         self.shape = (width, height)
-        self._eye_preview = ET28EyePreview(match.m_irOneEyeWidth, match.m_irOneEyeHeight, self.identity)
+        preview = ET28EyePreview(match.m_irOneEyeWidth, match.m_irOneEyeHeight, self.identity)
+        self._eye_preview = preview
 
         def camera(_, pointer, length):
             try:
+                if not active():
+                    return
                 identity = self.identity('scene')
                 if not pointer or length != width * height * 3:
                     raise ValueError('Invalid ET28 BGR frame length')
                 pixels = C.string_at(pointer, length)
-                self._last_frame = time.monotonic()
-                self.push(VideoFrame(identity, 'scene', width, height, 'bgr', pixels, None))
+                if active():
+                    self._last_frame = time.monotonic()
+                    self.push(VideoFrame(identity, 'scene', width, height, 'bgr', pixels, None))
             except Exception as exc:
-                self.failure = str(exc)
+                if active():
+                    self.failure = str(exc)
 
         def output(_, pointer):
             try:
+                if not active():
+                    return
                 if not pointer:
                     raise ValueError('Null tracking pointer')
                 identity = self.identity('gaze')
-                self.push(et28_gaze_sample(pointer.contents, identity, (width, height)))
+                sample = aiot_gaze_sample(pointer.contents, identity, (width, height), (preview.width, preview.height))
+                if active():
+                    self.push(sample)
             except Exception as exc:
-                self.failure = str(exc)
-        world_callback = b.CameraCallback(camera)
-        eye_callback = b.CameraCallback(self._eye_preview.callback)
-        tracker_callback = b.TrackInfoCb(output)
-        self.callbacks.extend((world_callback, eye_callback, tracker_callback))
-        self.lib.et28_registerWorldCameraCb(world_callback, None)
-        self.lib.et28_registerEyeCameraCb(eye_callback, None)
-        self.lib.et28_registerTrackerOutputCb(tracker_callback, None)
-        checked(self.lib.et28_startCamera(), 'startCamera')
+                if active():
+                    self.failure = str(exc)
+
+        native.start_camera(camera,
+                            lambda _, ptr, size: preview.accept('left_eye', ptr, size),
+                            lambda _, ptr, size: preview.accept('right_eye', ptr, size), output)
 
     def read(self, timeout_ms=100):
         if self.tracker and self.tracker.worker_error:
@@ -329,15 +315,25 @@ class HuahongService:
                 self.tracker.calib_points = previous_points
                 raise
         else:
-            from .vendor.et28_dll import EyeType
-            # One shared MARK round samples both eyes together, matching the
-            # vendor demo with "single eye (left -> right -> merge)" unchecked.
-            checked(self.lib.et28_InitCalibration(points, EyeType.ET28_TWOEYE), 'InitCalibration')
-            # The C header requires InitCalibration before these version getters.
-            self.versions.update({name: (func() or b'').decode('utf-8', errors='replace') for name, func in
-                [('algorithm', self.lib.et28_getGzAlgVersion), ('firmware', self.lib.et28_getFirmWareVersion)]})
+            self._et28.start_calibration(points)
+            self.versions = self._et28.versions(include_algorithm=True)
             logging.info('huahong.et28 calibration_initialized points=%s eye_mode=TWOEYE versions=%s',
                          points, self.versions)
+        self.points = points
+
+    def restore_calibration(self, feature, points):
+        """Reuse a feature saved from an earlier calibration (vendor demo: load cablic.dat)."""
+        if type(points) is not int or points not in (1, 3, 5, 9):
+            raise ValueError('Unsupported calibration point count')
+        if not feature:
+            raise ValueError('Empty calibration feature')
+        self.stop_tracking()
+        self.calibration_quality = None
+        if self.tracker:
+            self.tracker.load_calibration_feature(feature)
+        else:
+            # start_tracking initialises the tracker and loads these bytes.
+            self._et28_feature = bytes(feature)
         self.points = points
 
     def calibration_point(self, x, y):
@@ -347,17 +343,15 @@ class HuahongService:
         if self.tracker:
             checked(self.tracker.perform_one_point_calibration((x, y), timeout=timeout), 'calibration_point')
         else:
-            from .vendor.et28_dll import et28_GzTrackerPoint2d
-            point = et28_GzTrackerPoint2d(x, y)
-            checked(self.lib.et28_performOnePointCalibration(C.byref(point), timeout), 'calibration_point')
+            self._et28.calibration_point(x, y, timeout)
 
     def cancel_calibration(self):
         self._et28_feature = b''
         self.calibration_quality = None
         if self.tracker:
             self.tracker.calibration_stop()
-        elif self.lib:
-            self.lib.et28_CalibrationStop()
+        elif self._et28:
+            self._et28.stop_calibration()
 
     def feature(self):
         self.calibration_quality = None
@@ -368,37 +362,30 @@ class HuahongService:
             if int(bias.numOfCalibrate) != self.points or any(int(bias.cablicStatus[i]) not in (0, 1) for i in range(self.points)):
                 raise EyeTrackingError('ET10C calibration quality failed')
             return self.tracker.get_calibration_feature()
-        from .vendor.et28_dll import et28_GazeTrackerCalibBias
         self._et28_feature = b''
-        left, right = et28_GazeTrackerCalibBias(), et28_GazeTrackerCalibBias()
-        checked(self.lib.et28_getCalibBias(C.byref(left), C.byref(right)), 'getCalibBias')
-        reports = {'left': _et28_quality_report(left), 'right': _et28_quality_report(right)}
-        logging.info('huahong.calibration quality model=%s expected_count=%s left=%s right=%s',
-                     self.model, self.points, reports['left'], reports['right'])
-        failures = []
-        for eye, report in reports.items():
-            if report['count'] != self.points:
-                failures.append(f'{eye} count={report["count"]} expected={self.points}')
-            bad = [f'{point["index"]}(status={point["status"]})' for point in report['points']
-                   if point['status'] not in (0, 1)]
-            if bad:
-                failures.append(f'{eye} bad points=' + ','.join(bad))
-        if failures:
-            raise EyeTrackingError('ET28 calibration quality failed: ' + '; '.join(failures))
-        length = C.c_uint32()
-        self.lib.et28_getFeatureLen(C.byref(length))
-        if not 0 < length.value <= 1024 * 1024:
-            raise EyeTrackingError('Invalid calibration feature length')
-        data, written = (C.c_uint8 * length.value)(), C.c_uint32()
-        checked(self.lib.et28_SaveCalibrationDataBin(data, C.byref(written)), 'SaveCalibrationDataBin')
-        if not 0 < written.value <= length.value:
-            raise EyeTrackingError('Invalid calibration bytes written')
-        self._et28_feature = bytes(data[:written.value])
+        try:
+            left, right = self._et28.calibration_bias()
+        except (EyeTrackingError, OSError) as exc:
+            logging.warning('huahong.calibration quality unavailable: %s', exc)
+            reports = None
+        else:
+            reports = {'left': _et28_quality_report(left), 'right': _et28_quality_report(right)}
+            logging.info('huahong.calibration quality model=%s expected_count=%s left=%s right=%s',
+                         self.model, self.points, reports['left'], reports['right'])
+            for eye, report in reports.items():
+                for point in report['points'][:self.points]:
+                    logging.info('huahong.calibration point_quality eye=%s index=%s status=%s score=%s bias_px=%s',
+                                 eye, point['index'], point['status'], point['score'], point['bias'])
+            if any(report['count'] != self.points or report['truncated'] for report in reports.values()):
+                logging.warning('huahong.calibration quality report incomplete expected_count=%s', self.points)
+                reports = None
+        self._et28_feature = self._et28.feature()
         # Score is the SDK's unsigned per-point value (observed values exceed
         # 100). The mean is our display aggregation, not a vendor whole-round
         # score. Keep every native point; non-finite biases are reported as null.
-        self.calibration_quality = {'version': 1, 'provider': 'HH_ET28',
-                                    'aggregation': 'arithmetic_mean', **reports}
+        if reports:
+            self.calibration_quality = {'version': 1, 'provider': 'HH_ET28',
+                                        'aggregation': 'arithmetic_mean', **reports}
         return self._et28_feature
 
     def start_tracking(self):
@@ -413,31 +400,52 @@ class HuahongService:
             # Reload this round's validated bytes after initialization instead of
             # relying on undocumented retention of the native calibration state.
             try:
-                checked(self.lib.et28_initTracker(self.points), 'initTracker')
-                feature = (C.c_uint8 * len(self._et28_feature)).from_buffer_copy(self._et28_feature)
-                checked(self.lib.et28_LoadCalibrationDataBin(feature, len(feature)), 'LoadCalibrationDataBin')
+                self._et28.init_tracker(self.points)
+                self._et28.load_feature(self._et28_feature)
             except Exception:
                 self.calibration_quality = None
                 raise
             logging.info('huahong.et28 tracking_start smooth_level=%s', ET28_SMOOTH_LEVEL)
+            native = self._et28
+
             def run():
                 try:
-                    checked(self.lib.et28_startTracker(ET28_SMOOTH_LEVEL), 'startTracker')
+                    native.start_tracking(ET28_SMOOTH_LEVEL)
                 except Exception as exc:
                     self.calibration_quality = None
                     self.failure = str(exc)
             self.worker = threading.Thread(target=run, name='huahong-tracker', daemon=True)
+            self.tracking_started = time.monotonic()
             self.worker.start()
-        self.tracking_started = time.monotonic()
+        if self.tracker:
+            self.tracking_started = time.monotonic()
         self.tracking = True
+        if self._et28:
+            self._wait_for_et28_tracking()
+
+    def _wait_for_et28_tracking(self):
+        deadline = time.monotonic() + 3
+        while not self.failure and self.worker.is_alive() and time.monotonic() < deadline:
+            if self.last_gaze > self.tracking_started:
+                return
+            try:
+                # This command owns the reader. Drain pre-recording frames
+                # while waiting so a slow startup cannot fill the scene queue.
+                self._take(.02)
+            except queue.Empty:
+                pass
+        self.calibration_quality = None
+        self._et28_feature = b''
+        self.stop_tracking()
+        raise EyeTrackingError(self.failure or 'ET28 tracker did not start delivering gaze samples')
 
     def stop_tracking(self):
         if not self.tracking:
             return
         if self.tracker:
             checked(self.tracker.stop_tracker(), 'stopTracker')
-        elif self.lib:
-            checked(self.lib.et28_stopTracker(), 'stopTracker')
+        elif self._et28 and self.worker and self.worker.is_alive():
+            self._et28.stop_tracking()
         if self.worker:
             self.worker.join(5)
             if self.worker.is_alive():
@@ -456,13 +464,9 @@ class HuahongService:
             if self.tracker:
                 self.tracker.close()
                 self.tracker = None
-            if self.lib:
-                self.lib.et28_CalibrationStop()
-                self.lib.et28_DeinitCalibration()
-                checked(self.lib.et28_stopCamera(), 'stopCamera')
-                checked(self.lib.et28_device_disconnect(), 'device_disconnect')
-                checked(self.lib.et28_device_deinit(), 'device_deinit')
-                self.lib = None
+            if self._et28:
+                self._et28.close()
+                self._et28 = None
         except BaseException:
             self.state = 'failed'
             raise

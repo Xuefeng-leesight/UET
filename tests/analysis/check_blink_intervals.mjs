@@ -195,7 +195,7 @@ const compareTable = findNode('src/features/analysis/reports/CompareModePanel.ts
   ts.isJsxElement(node) && node.openingElement.tagName.getText() === 'table' && node.getText().includes('recordMetricDefs.map'));
 const recordMetricDefs = evaluate(findNode('src/features/analysis/reports/CompareModePanel.tsx', node =>
   ts.isVariableDeclaration(node) && node.name.getText() === 'recordMetricDefs').initializer, { COMPARE_METRIC_DEFS });
-const compareMarkup = renderToStaticMarkup(evaluate(compareTable, { compareResult: reportComparison, recordMetricDefs, formatMetricValue }));
+const compareMarkup = renderToStaticMarkup(evaluate(compareTable, { compareResult: reportComparison, recordMetricDefs, formatMetricValue, groupKeyLabel: key => key }));
 assert.ok(compareMarkup.includes('完整眨眼起始事件数（按眼）'));
 assert.ok(compareMarkup.includes('所选范围眨眼区间重叠时长（按眼相加）'));
 assert.ok(compareMarkup.includes('起始眨眼事件平均完整时长'));

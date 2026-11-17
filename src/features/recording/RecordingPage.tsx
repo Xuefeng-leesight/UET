@@ -788,15 +788,23 @@ const RecordingPage: React.FC<RecordingPageProps> = ({
   const cardDetectionLastLogRef = React.useRef(0);
   const cardDetectionOverlayLastLogRef = React.useRef(0);
   const cardDetectionCaptureSeqRef = React.useRef(0);
+  const cardDetectionAcceptedRef = React.useRef<{
+    captureSeq: number;
+    capturedAtMs: number;
+    rawPoint: { x: number; y: number };
+    acceptedPoint: { x: number; y: number };
+  } | null>(null);
   const cardDetectionLastCaptureMetaRef = React.useRef<Record<string, unknown> | null>(null);
   const cardDetectionDebugFrameRef = React.useRef<{
     activeFrameWidth: number;
     activeFrameHeight: number;
     videoFrameSize: { width: number; height: number } | null;
+    calibPointIndex: number;
   }>({
     activeFrameWidth: 0,
     activeFrameHeight: 0,
     videoFrameSize: null,
+    calibPointIndex,
   });
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [containerElement, setContainerElement] = React.useState<HTMLDivElement | null>(null);
@@ -850,6 +858,7 @@ const RecordingPage: React.FC<RecordingPageProps> = ({
   const frameHeight = activeFrameHeight;
   React.useEffect(() => {
     cardDetectionLastPointRef.current = null;
+    cardDetectionAcceptedRef.current = null;
     cardDetectionSwitchCandidateRef.current = null;
     cardDetectionMissesRef.current = 0;
     emitCardDetectionDebug('lock-reset', { reason: 'calibration-point-changed', calibPointIndex });
@@ -859,8 +868,9 @@ const RecordingPage: React.FC<RecordingPageProps> = ({
       activeFrameWidth,
       activeFrameHeight,
       videoFrameSize: videoFrameSize ?? null,
+      calibPointIndex,
     };
-  }, [activeFrameHeight, activeFrameWidth, videoFrameSize]);
+  }, [activeFrameHeight, activeFrameWidth, videoFrameSize, calibPointIndex]);
   const selectedRecordingViewMode: RecordingViewMode | null = ['local', 'monitor', 'remote'].includes(String(recordingSettings.recordingViewMode))
     ? (recordingSettings.recordingViewMode as RecordingViewMode)
     : null;
@@ -893,6 +903,7 @@ const RecordingPage: React.FC<RecordingPageProps> = ({
       cardDetectionBusyRef.current = false;
       cardDetectionMissesRef.current = 0;
       cardDetectionLastPointRef.current = null;
+      cardDetectionAcceptedRef.current = null;
       cardDetectionSwitchCandidateRef.current = null;
       cardDetectionLastCaptureMetaRef.current = null;
       try {
@@ -986,6 +997,14 @@ const RecordingPage: React.FC<RecordingPageProps> = ({
           const selectedCandidate = diagnostics?.selectedCandidate ?? null;
           const rawX = Number(raw.x);
           const rawY = Number(raw.y);
+          if (typeof captureMeta?.captureSeq === 'number' && typeof captureMeta.capturedAtMs === 'number') {
+            cardDetectionAcceptedRef.current = {
+              captureSeq: captureMeta.captureSeq,
+              capturedAtMs: captureMeta.capturedAtMs,
+              rawPoint: { x: rawX, y: rawY },
+              acceptedPoint: point,
+            };
+          }
           const correctedCenter = selectedCandidate?.correctedCenter ?? null;
           const rawCenters = selectedCandidate?.rawCenters ?? null;
           emitCardDetectionDebug('result-geometry', {
@@ -1073,6 +1092,7 @@ const RecordingPage: React.FC<RecordingPageProps> = ({
         });
         if (cardDetectionMissesRef.current >= 4) {
           cardDetectionLastPointRef.current = null;
+          cardDetectionAcceptedRef.current = null;
           onCardDetectionUpdate?.({
             point: null,
             status: 'detecting',
@@ -1171,6 +1191,7 @@ const RecordingPage: React.FC<RecordingPageProps> = ({
         cardDetectionCaptureSeqRef.current = captureSeq;
         const captureMeta = {
           captureSeq,
+          capturedAtMs: now,
           source: sourceName,
           sourceWidth,
           sourceHeight,
@@ -1671,6 +1692,14 @@ const RecordingPage: React.FC<RecordingPageProps> = ({
                     style={{ pointerEvents: 'auto', cursor: 'pointer' }}
                     onClick={(event) => {
                       event.stopPropagation();
+                      const detection = cardDetectionAcceptedRef.current;
+                      emitCardDetectionDebug('submit-source-frame', {
+                        calibPointIndex,
+                        point: cardDetectedPoint,
+                        detection,
+                        detectionAgeMs: detection ? Date.now() - detection.capturedAtMs : null,
+                        switchCandidate: cardDetectionSwitchCandidateRef.current,
+                      });
                       onCardCalibrationTrigger?.();
                     }}
                     disabled={isPupilCardCalibration && (!isCalibrationTrackerReady || !cardDetectedPoint || cardDetectionStatus !== 'ready' || cardDetectionSubmitting)}
@@ -2271,8 +2300,12 @@ const RecordingPage: React.FC<RecordingPageProps> = ({
                 {isGlassesMode ? (
                   <div className="w-full aspect-video grid grid-cols-2 gap-2">
                     {[
-                      { label: '左眼', ref: leftEyeImageRef, lastAt: leftEyeImageLastAt },
-                      { label: '右眼', ref: rightEyeImageRef, lastAt: rightEyeImageLastAt },
+                      // Pupil Core eye cameras are mounted differently: show the left
+                      // image mirrored left-right and the right image flipped upside
+                      // down, so both read like facing the participant (nose towards
+                      // the middle). Display only; detection and data are unchanged.
+                      { label: '左眼', ref: leftEyeImageRef, lastAt: leftEyeImageLastAt, transform: isPupilCardCalibration ? 'scaleX(-1)' : undefined },
+                      { label: '右眼', ref: rightEyeImageRef, lastAt: rightEyeImageLastAt, transform: isPupilCardCalibration ? 'scaleY(-1)' : undefined },
                     ].map((item) => (
                       <div
                         key={item.label}
@@ -2285,7 +2318,7 @@ const RecordingPage: React.FC<RecordingPageProps> = ({
                           ref={item.ref}
                           className="w-full h-full object-contain"
                           alt=""
-                          style={{ display: item.lastAt === null ? 'none' : 'block' }}
+                          style={{ display: item.lastAt === null ? 'none' : 'block', transform: item.transform }}
                         />
                         <div
                           className="absolute inset-0 flex items-center justify-center"

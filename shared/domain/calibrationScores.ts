@@ -65,7 +65,8 @@ export function parseEt28CalibrationQuality(value: unknown): Et28CalibrationQual
     const points: Et28EyeQuality['points'] = [];
     for (const [index, value] of rawEye.points.entries()) {
       const point = record(value);
-      if (!point || point.index !== index + 1 || (point.status !== 0 && point.status !== 1)
+      if (!point || point.index !== index + 1 || typeof point.status !== 'number'
+          || !Number.isInteger(point.status) || point.status < -0x80000000 || point.status > 0x7fffffff
           || !count(point.score) || point.score > 0xffffffff || !Array.isArray(point.bias) || point.bias.length !== 2
           || !point.bias.every((coordinate) => coordinate === null || finite(coordinate))) return null;
       points.push({ index: index + 1, status: point.status, score: point.score,

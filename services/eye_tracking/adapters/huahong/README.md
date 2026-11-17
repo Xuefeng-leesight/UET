@@ -12,7 +12,7 @@ npm run migrate:huahong-sdk  # 首次升级旧 SDK 目录；新布局重复运�
 npm run check:huahong-sdk
 ```
 
-Electron 按项目型号启动此环境；可用 `MRT_HUAHONG_PYTHON_BIN` 明确指定解释器。打包环境还需 PyInstaller，设置目标平台 `MRT_FFPROBE_PATH` 后运行 `npm run build:huahong-server`；Windows 完整打包脚本已包含它。华弘 DLL 只随 `SDK/huahong/et10/bin/windows/x64` / `et28/bin/windows/x64` 分发。未实际生成或验收 Windows 安装包。
+Electron 按项目型号启动此环境。可用 `MRT_HUAHONG_PYTHON_BIN` 明确指定解释器。打包环境还需 PyInstaller，运行 `npm run build:huahong-server`。Windows 完整打包脚本已包含它。华弘 DLL 随 `SDK/huahong/et10/bin/windows/x64` 和 `et28-aiot/bin/windows/x64` 分发。
 
 `setup:huahong` 在 Windows 创建或更新上述专用 venv 并安装固定版本 requirements，包含录制必需的 `msgpack`。安装后完整退出并重启软件。若已设置 `MRT_HUAHONG_PYTHON_BIN`，它仍优先于默认 venv：将其指向该 venv 的 `Scripts/python.exe`，或用指定解释器的 `-m pip install -r services/eye_tracking/adapters/huahong/requirements.txt` 安装依赖。入口日志 `Huahong runtime python=...` 给出实际解释器；traceback 的标准库路径不能单独用于判断是否使用 venv。
 
@@ -46,8 +46,8 @@ ET10C 可选 `res_type` 必须在 sample 的枚举型号分辨率表中；省略
 - 所有样本使用回调入口的 host 到达时间：`source_time_s` 取高精度 `time.perf_counter()`，视频、眼动、Marker 和刺激物共用此时域；`received_monotonic_s` 仍供设备健康/超时检查使用，两域不直接相减。ET10 `currTimePts` 单位未核实，ET28 接口没有硬件时间戳。不能承诺硬件采样级同步；不调用 Pupil 远程时钟或伪造源时钟。
 - 回调立即复制 native 内存、有界入队；512 条/64 MiB 双重限制，单帧上限 32 MiB；溢出明确失败并收尾。追踪在独立线程运行；线程未停止不得 native deinit。
 - ET28 是眼镜式，通过设备能力配置复用已有卡片式三/五/九点校准，默认卡片式五点：共享识别器定位实体卡片中心，用户点击原有校准按钮提交场景归一化坐标。ET10（SDK 型号 ET10C）是桌面式，复用 7invensun 桌面全屏/被试屏自动三/五/九点校准，默认五点；整轮重配同时更新 SDK 的总点数与本轮点数。不新增校准页面、窗口或组件。
-- 单点 ACK 的 `point_pending: true` 只表示已提交，必须等待原生调用结果。所有点按 `1..N` 顺序成功、厂商质量和 feature 长度有效后，后端才启动追踪并返回系数与 `tracking_error: 0`，使原有校准后直接录制流程成立。ET28 保存本轮验证成功的特征，在当前连接中依次执行 `initTracker → LoadCalibrationDataBin → 独立线程 startTracker(12)`；新校准和关闭清除特征缓存，取消使运行时凭据失效，不加载其他连接的旧系数。质量/追踪初始化/载入失败不保留可录制凭据；原始错误码写入错误消息。
-- ET28 原生单点失败按厂商 demo 中止整轮，通过既有 `calibration_invalidated` 清除共享界面会话及已采点，从原“开始校准”入口重新初始化。SDK 没有逐点编号/回退接口，不假定失败后先前样本仍可用；ET10 保留既有单点重试。双眼质量仍要求点数完整、状态为 Perfect/Common，Bad 或未知状态不得授权录制。
+- 单点 ACK 的 `point_pending: true` 只表示已提交，必须等待原生调用结果。所有点按 `1..N` 顺序成功且 feature 长度有效后，后端才启动追踪并返回系数与 `tracking_error: 0`，使原有校准后直接录制流程成立。ET28 保存本轮验证成功的特征，在当前连接中依次执行 `initTracker → LoadCalibrationDataBin → 独立线程 startTracker(12)`；新校准和关闭清除特征缓存，取消使运行时凭据失效，不加载其他连接的旧系数。追踪初始化或载入失败时不保留可录制凭据。逐点质量仅用于提示和归档，低精度或评分缺失不拦截录制。原始错误码写入错误消息。
+- ET28 原生单点失败按厂商 demo 中止整轮，通过既有 `calibration_invalidated` 清除共享界面会话及已采点，从原“开始校准”入口重新初始化。SDK 没有逐点编号/回退接口，不假定失败后先前样本仍可用；ET10 保留既有单点重试。逐点评级随本轮结果展示，Bad 和未知等级保留原始值。
 - 系数包含型号、连接 generation、物理参数 SHA-256 和特征二进制；仅本次连接中已完成校准的 token 可用于追踪。历史系数会被明确拒绝，必须重新校准，不加载 SDK 的 cablic.dat。
 - 取消、设备断连和最后一个命令 WebSocket 断开使本次校准凭据失效；运行时与发送队列按代际丢弃迟到结果。不并发调用未经验证的 SDK stop API。ET28 原生单点按原厂示例传入十秒超时，运行时十一秒使本轮失败；ET10 保留五秒/六秒。拒绝迟到成功，旧线程退出前禁止新校准/设备反初始化，清理等待时间与型号采样窗口一致。命令连接断开不终止正在保存的录制。
 - ET10C 录制明确匹配实验显示器（单屏可直接选择；多屏必须使用分屏返回的 capture_display 或在 huahong.json 配置相同结构的 capture_display），ET28 录制真实场景 BGR；共享既有视频编码/验证组件，按型号注入 CSV 映射，Pupil 默认参数保持原值。输出 MP4、CSV、meta.json 与 `.pupil` 附档（沿用公共录制格式名称，source_model 明确为华弘）。瞳孔/事件缺失不伪造为零。
@@ -103,7 +103,7 @@ npm run docs:codegraph
 
 13:55–13:57 校准记录包含两次约十秒后 `-8`、两次短时 `-1` 和一次最终质量失败。14 次提交均来自新鲜卡片检测，坐标/点号/尝试对应正常；厂商没有公开这些负码的完整定义，不能统一称为超时或卡片识别失败。原厂 `samples/et28_interface.py` 的 Mark/SCEEN 在任一点失败后结束整轮，`demo_ui.py` 不再保存该轮系数；原接入仍保留已采点局部重试，存在依赖未知 native 残留状态的问题。现在按厂商流程使本轮失效，再经现有入口重新校准。现场第 2 点失败重试后的整轮质量失败与这项风险一致，但不能据日志证明 SDK 内部具体清空机制。
 
-质量报告新增双眼点数、每点状态、分数和偏差，错误区分点数不完整与不合格点；保留原有 Perfect/Common 门槛，不把单点成功视为整轮拟合成功。单点采样期间应持续注视检测中心、保持头部和卡片稳定，收到当前点完成提示后再移动。此次修改不能保证消除所有厂商采样或真实质量失败；需真机复测三/五/九点、失败后重开、取消/断连及校准后连续录制，并保留完整日志。
+质量报告记录双眼点数、每点状态、分数和偏差。此处为旧门槛下的现场记录，当前逐点评级仅用于提示和归档。单点采样期间应持续注视检测中心、保持头部和卡片稳定，收到当前点完成提示后再移动。此次修改不能保证消除所有厂商采样或真实质量失败；需真机复测三/五/九点、失败后重开、取消/断连及校准后连续录制，并保留完整日志。
 
 本次验证：完整眼动套件 282 项，278 项通过、4 项未配置打包程序跳过；包含真实 FFmpeg/ffprobe 录制、严格帧时间拒绝、ET28 整轮失败与重开、ET10 局部重试和真实前端旧结果过滤。类型检查、生产构建、共享设备生命周期/校准评分、架构、Python 编译（134 文件）、仓库卫生及华弘 SDK 32 文件校验通过；调用图已更新。前端生产代码和厂商 SDK 未修改，Windows DLL/真机复测未执行。
 
@@ -149,7 +149,7 @@ npm run docs:codegraph
 
 ## 2026-10-16 厂商 Python sample 对照
 
-用户提供 `release_et28_python_v1.0.0_20260928`。其中 `release/` 与同名嵌套目录的全部 21 个文件逐字节一致；12 个 DLL、绑定、上层封装及说明均与仓库 `SDK/huahong/et28` 对应供应物 SHA-256 相同。生产绑定 `vendor/et28_dll.py` 也与原绑定一致；没有替换 DLL 或修改 samples。
+旧版参考来自 `release_et28_python_v1.0.0_20260928`。当前生产使用 2026-11-11 的 aiotGlass Python Demo v1.0.1 所附 DLL 和绑定，开发版启动方式见 [SDK 目录说明](../../../../SDK/huahong/README.md)。
 
 | 项目 | 厂商依据与当前接入 |
 | --- | --- |
@@ -161,7 +161,7 @@ npm run docs:codegraph
 | 眼动点 | 原厂 worldPoint 为场景像素；保留左右独立有效标志并归一化，主点为有效眼均值。CSV 仅写推荐/左右眼 gaze_x/y，有效 mask 为 1；物理三维 gaze_point/raw_point/smooth_point XYZ 列留空。WS 保留明确二维空间的兼容别名；缺失或非有限值不填零。 |
 | 其他原值 | 每眼 haveEyeInfo、haveGazeInfo、worldPoint、eyeInfo（中心、宽、高、角度）、sightLine（角膜中心、方向）随 `normalized-samples.jsonl` 中 monocular/vendor 归档；非有限原值转 null。 |
 | 单位与有效性 | sample 没有明确瞳孔尺寸、三维视线的单位/坐标轴，因此不填毫米瞳孔或物理三维列；不以 gaze 有效冒充 pupil 有效。source_norm_pos 保持 top-left，source_backend 为 huahong_sdk。 |
-| 时间与录制 | 回调没有设备时间戳，继续明确使用主机到达时刻。sample 预览满队列会丢旧帧且不提供本软件录制链；生产有界缓存与明确失败规则保留。 |
+| 时间与录制 | aiotGlass 提供设备时间戳。当前录制继续使用主机到达时刻对齐场景和眼动，待真机确认设备时钟后再评估是否切换。生产有界缓存与明确失败规则保留。 |
 
 实际回放解析器已验证 ET28/ET10 默认、推荐、原始、平滑选项在没有独立 raw/smooth 数据时回退推荐二维点，包括有效 `(0,0)`；没有增加平滑算法，也不以二维别名冒充三维测量。
 
@@ -173,9 +173,9 @@ npm run docs:codegraph
 
 ## ET28 红外眼图预览（2026-10-18）
 
-在原录制页打开“眼图显示”，复用既有左眼/右眼预览框，不增加厂商窗口。适配器注册 `et28_registerEyeCameraCb`，按枚举相机参数读取单眼宽高；原厂 sample 的 `concat_frame` 与 `selfcheck.py` 明确合并灰度图左半为左眼、右半为右眼。拆分后的 BGR 帧通过原 `image_frame` 协议发送为 `left_eye` / `right_eye`；场景仍为 `scene`，校准识别继续只消费场景画面。
+在原录制页打开“眼图显示”，复用既有左眼/右眼预览框。新版分别注册 `aiotGlass_registerLeftEyeCameraCb` 和 `aiotGlass_registerRightEyeCameraCb`，按枚举参数校验单眼帧长度，转换成 BGR 并通过原 `image_frame` 协议发送。校准识别继续只消费场景画面。
 
-红外预览使用独立单帧灰度缓存，最多每秒 20 次拆分并转换，与场景/注视无损队列隔离；眼图不更新场景健康时间，也不进入录制启动预缓冲或录像队列。无效预览帧丢弃并限次告警，不把纯预览损坏误报为场景采集故障。慢客户端按流合并最新未发送帧，眼图不能挤掉尚未发送的场景帧，重连不合并旧代际图像。现有开关、断连和组件清理释放预览资源，并过滤旧连接迟到事件。
+红外预览每眼独立保留最新灰度帧，最多每秒 20 次转换，与场景/注视无损队列隔离。眼图不更新场景健康时间，也不进入录制启动预缓冲或录像队列。无效预览帧丢弃并限次告警。慢客户端按流合并最新未发送帧，重连时清除旧代际图像。
 
 该接入仅提供实时红外预览，不增加眼图视频或校准截图保存。Windows 真机验收需逐眼遮挡核对左右标签、检查正常/1920 remap 参数下的尺寸和方向，并覆盖校准时查看、连续录制时查看、开关眼图、拔线/重连和慢客户端场景连续性。模拟帧测试不能证明硬件方向、实际帧率或设备稳定性。
 
@@ -183,7 +183,7 @@ npm run docs:codegraph
 
 ## 固定绑定来源
 
-`vendor/et10c_gaze/` 来自 `SDK/huahong/et10/samples/et10c_gaze/`，仅保留 tracker 使用的绑定与常量；增加实测 screen_info 注入、worker 错误上报和停止后 join 检查，排除 demo/UI、自检、参数 GUI。`vendor/et28_dll.py` 为 sample 绑定副本；生产生命周期与数据转换由 service.py 实现，不调用 Tk/OpenCV demo。SDK 参考源码保留在 samples 中，运行库统一放入 bin/windows/x64。
+`vendor/et10c_gaze/` 来自 `SDK/huahong/et10/samples/et10c_gaze/`，保留 tracker 使用的绑定与常量，并增加实测 screen_info 注入、worker 错误上报和停止后 join 检查。`vendor/aiot_dll.py` 为新版厂商绑定副本。`aiot_et28.py` 负责新版设备生命周期，`service.py` 接入共享校准和录制。左右眼图各保留最新帧，和场景录制队列隔离。
 
 ## 本次验证结果（2026-10-07）
 

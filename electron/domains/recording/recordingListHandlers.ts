@@ -103,9 +103,11 @@ export function registerRecordingListHandlers(dependencies: RecordingListDepende
           }
           const meta = integratedMetadata.get(key)
           if (meta?.productIntegration !== true || !['HH_ET10C', 'HH_ET28'].includes(String(meta.deviceModel))) continue
-          // The old metadata only has monotonic source time. Use file mtime for
-          // display, while keeping the identity independent of time and subject.
-          const date = stat.mtime
+          // Newer recordings save the wall clock of the first video frame. Older
+          // metadata only has monotonic source time, so fall back to file mtime
+          // for display, while keeping the identity independent of time and subject.
+          const startedAtMs = Number(meta.recordingStartedAtMs)
+          const date = Number.isFinite(startedAtMs) && startedAtMs > 0 ? new Date(startedAtMs) : stat.mtime
           const pad = (value: number) => String(value).padStart(2, '0')
           const timestamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
           info = { path: fullPath, stat, subjectName: name, timestamp, stableId: `rec_${key}`, integratedMeta: meta }
@@ -120,7 +122,7 @@ export function registerRecordingListHandlers(dependencies: RecordingListDepende
   
     const allKeys = new Set([...mp4ByKey.keys(), ...csvByKey.keys()])
   
-    const recordingsSummaryVersion = 10
+    const recordingsSummaryVersion = 12
     const recordingsSummaryDir = path.join(projectDir, '.config')
     const recordingsSummaryPath = path.join(recordingsSummaryDir, 'recordings-summary.json')
     const facialRoot = path.join(projectDir, 'facial-analysis')
@@ -517,8 +519,18 @@ export function registerRecordingListHandlers(dependencies: RecordingListDepende
         typeof probedDuration === 'number'
           ? mergeRecordMetrics(metaMetrics, { durationSeconds: probedDuration })
           : metaMetrics
-      const csvMetrics = csvInfo?.path
-        ? await computeCsvMetrics(csvInfo.path, authoritativeMetrics)
+      // Pupil/Huahong recordings saved in the 7invensun layout are read like A8:
+      // <name>.csv is the only CSV for playback, analysis and export.
+      const standardLayout = meta?.standardCsvLayout === '7invensun'
+      // A few 11-16 test recordings kept the recorder CSV in <name>.pupil/internal.csv.
+      const internalCsvPath = csvInfo?.path ? path.join(recordingsDir, `${name}.pupil`, 'internal.csv') : undefined
+      const hasInternalCsv = internalCsvPath
+        ? await fs.promises.stat(internalCsvPath).then((value) => value.isFile(), () => false)
+        : false
+      const sevenInvensunLayout = standardLayout || hasInternalCsv
+      const analysisCsvPath = hasInternalCsv ? internalCsvPath : csvInfo?.path
+      const csvMetrics = analysisCsvPath
+        ? await computeCsvMetrics(analysisCsvPath, authoritativeMetrics)
         : authoritativeMetrics
   
       const duration = ''
@@ -540,12 +552,17 @@ export function registerRecordingListHandlers(dependencies: RecordingListDepende
         : !rejectedEt28Report && typeof meta?.calibrationLeftScore === 'number' ? meta.calibrationLeftScore : undefined
       const calibrationRightScore = calibrationScores?.et28Quality ? calibrationScores.right
         : !rejectedEt28Report && typeof meta?.calibrationRightScore === 'number' ? meta.calibrationRightScore : undefined
-      const configuredSamplingRateHz =
+      const storedConfiguredRateHz =
         typeof meta?.configuredSamplingRateHz === 'number'
           ? normalizeDataSamplingRateHz(meta.configuredSamplingRateHz)
           : csvMetrics
             ? csvMetrics.configuredSamplingRateHz
             : undefined
+      // 0 means "automatic" (the device's own rate). The 7invensun layout always
+      // states a rate, so report the measured one for these recordings.
+      const configuredSamplingRateHz = sevenInvensunLayout && !storedConfiguredRateHz && csvMetrics?.samplingRateHz
+        ? Math.round(csvMetrics.samplingRateHz)
+        : storedConfiguredRateHz
       const videoWidth =
         toOptionalFiniteNumber(meta?.encodedWidth) ??
         toOptionalFiniteNumber(meta?.eyeEventFrameWidth)
@@ -582,7 +599,8 @@ export function registerRecordingListHandlers(dependencies: RecordingListDepende
         videoHeight,
         mp4Path: mp4Info?.path,
         mp4Url: mp4Info ? await buildLocalResourceUrl(mp4Info.path) : undefined,
-        csvPath: csvInfo?.path,
+        csvPath: analysisCsvPath,
+        ...(sevenInvensunLayout ? { exportCsvPath: csvInfo?.path } : {}),
         timelineMarkers: timelineMarkers.length > 0 ? timelineMarkers : undefined,
         timelineSegments: timelineSegments.length > 0 ? timelineSegments : undefined,
         modalities: {
@@ -591,7 +609,7 @@ export function registerRecordingListHandlers(dependencies: RecordingListDepende
               ? meta?.status === 'failed' ? 'failed' : 'partial' : csvInfo || mp4Info ? 'complete' : 'partial',
             ...(integratedRecorder ? {
               message: meta?.recoveredAfterInterruption === true
-                ? '异常中断后已恢复部分数据，不能作为完整录制；原件保留在 .pupil 附档。'
+                ? '异常中断后已恢复部分数据，不能作为完整录制。'
                 : meta?.error || meta?.recoveryError || missingArtifactMessage || (meta?.status === 'complete' ? undefined : '录制尚未完整收尾'),
               recordingStatus: meta?.status ?? 'unknown',
               recordingError: meta?.error ?? meta?.recoveryError,

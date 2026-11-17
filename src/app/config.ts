@@ -6,7 +6,7 @@ export { ENABLE_DEBUG_TESTING } from '../../shared/constants/debug';
  * true：显示激活页面并校验产品模块；false：隐藏授权内容并开放全部模块。
  * 修改后需要重新启动开发环境或重新构建安装包。
  */
-export const ENABLE_LICENSE_AUTHORIZATION = true;
+export const ENABLE_LICENSE_AUTHORIZATION = false;
 
 /**
  * 生产后台服务地址。打包时若 .env 未配置 UST_API_ORIGIN，则回退使用这里的默认值，

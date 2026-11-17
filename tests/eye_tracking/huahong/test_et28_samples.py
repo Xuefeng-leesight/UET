@@ -10,8 +10,8 @@ import tempfile
 import unittest
 
 from services.eye_tracking.adapters.huahong.data_normalizer import gaze_csv_row, gaze_message
-from services.eye_tracking.adapters.huahong.et28_samples import et28_gaze_sample
-from services.eye_tracking.adapters.huahong.vendor import et28_dll as b
+from services.eye_tracking.adapters.huahong.et28_samples import aiot_gaze_sample
+from services.eye_tracking.adapters.huahong.vendor import aiot_dll as b
 from services.eye_tracking.domain.samples import GazeSample, SampleIdentity, VideoFrame
 from services.eye_tracking.infrastructure.pupil_recorder import PupilRecorder
 
@@ -21,20 +21,20 @@ class ET28SampleTests(unittest.TestCase):
         return SampleIdentity('HH_ET28', 'gaze', 1, 2, 10.05, 10.05)
 
     def output(self):
-        output = b.et28_GzTrackerPredictOutput()
-        output.haveGazeInfoLeft = output.haveGazeInfoRight = True
-        output.haveEyeInfoLeft, output.haveEyeInfoRight = False, True
-        output.worldPointLeft = b.et28_GzTrackerPoint2d(400, 300)
-        output.worldPointRight = b.et28_GzTrackerPoint2d(1200, 900)
-        output.eyeInfoLeft.pupilCenter = b.et28_GzTrackerPoint2d(17, 23)
-        output.eyeInfoLeft.pupilWidth, output.eyeInfoLeft.pupilHeight = 31, 19
-        output.eyeInfoLeft.pupilAngle = 12
-        output.sightLineLeft.corneaCenter = b.et28_GzTrackerVec3(1, 2, 3)
-        output.sightLineLeft.direction = b.et28_GzTrackerVec3(4, 5, 6)
+        output = b.AiotGazeTrackerPredictOutput()
+        output.leftPreDict.Gaze.valid = output.rightPreDict.Gaze.valid = True
+        output.leftPreDict.Pupil.pupil2d.valid, output.rightPreDict.Pupil.pupil2d.valid = False, True
+        output.leftPreDict.Gaze.worldPoint = b.AiotGzTrackerPoint2d(400, 300)
+        output.rightPreDict.Gaze.worldPoint = b.AiotGzTrackerPoint2d(1200, 900)
+        output.leftPreDict.Pupil.pupil2d.center = b.AiotGzTrackerPoint2d(17, 23)
+        output.leftPreDict.Pupil.pupil2d.width, output.leftPreDict.Pupil.pupil2d.height = 31, 19
+        output.leftPreDict.Pupil.pupil2d.angle = 12
+        output.leftPreDict.Gaze.corneaCenter = b.AiotGzTrackerVec3(1, 2, 3)
+        output.leftPreDict.Gaze.gazeDirection = b.AiotGzTrackerVec3(4, 5, 6)
         return output
 
     def sample(self, output=None):
-        return et28_gaze_sample(output or self.output(), self.identity(), (1600, 1200))
+        return aiot_gaze_sample(output or self.output(), self.identity(), (1600, 1200), (400, 300))
 
     def test_binocular_recommendation_retains_independent_flags_and_world_resolution(self):
         sample = self.sample()
@@ -47,14 +47,14 @@ class ET28SampleTests(unittest.TestCase):
         self.assertFalse(sample.monocular['left']['vendor']['haveEyeInfo'])
         self.assertTrue(sample.monocular['left']['vendor']['haveGazeInfo'])
         self.assertTrue(sample.monocular['right']['vendor']['haveEyeInfo'])
-        self.assertEqual(sample.pupils, ())
+        self.assertEqual([pupil.eye for pupil in sample.pupils], ['left', 'right'])
         self.assertIsNone(sample.point_3d)
         self.assertIsNone(sample.confidence)
         self.assertFalse(sample.native, 'vendor geometry must not enter Pupil world-camera-mm conversion')
 
     def test_single_eye_uses_gaze_flag_not_independent_eye_info_flag(self):
         output = self.output()
-        output.haveGazeInfoRight = False
+        output.rightPreDict.Gaze.valid = False
         sample = self.sample(output)
         self.assertTrue(sample.valid)
         self.assertEqual(sample.position, (.25, .25))
@@ -74,9 +74,9 @@ class ET28SampleTests(unittest.TestCase):
 
     def test_raw_callback_copy_outlives_native_storage_and_nonfinite_values_are_json_null(self):
         output = self.output()
-        output.worldPointLeft.x = float('nan')
-        output.eyeInfoLeft.pupilWidth = float('inf')
-        output.sightLineLeft.direction.z = float('-inf')
+        output.leftPreDict.Gaze.worldPoint.x = float('nan')
+        output.leftPreDict.Pupil.pupil2d.width = float('inf')
+        output.leftPreDict.Gaze.gazeDirection.z = float('-inf')
         sample = self.sample(output)
         C.memset(C.byref(output), 0, C.sizeof(output))
         raw = sample.monocular['left']['vendor']
@@ -98,19 +98,19 @@ class ET28SampleTests(unittest.TestCase):
                                 ((-1, 20), None), ((1601, 20), None), ((20, 1201), None)]:
             with self.subTest(point=point):
                 output = self.output()
-                output.haveGazeInfoRight = False
-                output.worldPointLeft = b.et28_GzTrackerPoint2d(*point)
+                output.rightPreDict.Gaze.valid = False
+                output.leftPreDict.Gaze.worldPoint = b.AiotGzTrackerPoint2d(*point)
                 sample = self.sample(output)
                 self.assertEqual(sample.position, expected)
                 self.assertEqual(sample.valid, expected is not None)
                 self.assertEqual(sample.monocular['left']['vendor']['worldPoint'], dict(zip(('x', 'y'), point)))
         for resolution in ((0, 1200), (1600, -1), (True, 1200), (1600.0, 1200)):
             with self.subTest(resolution=resolution), self.assertRaises(ValueError):
-                et28_gaze_sample(self.output(), self.identity(), resolution)
+                aiot_gaze_sample(self.output(), self.identity(), resolution, (400, 300))
 
     def test_missing_gaze_does_not_fabricate_points_or_pupil_validity(self):
         output = self.output()
-        output.haveGazeInfoLeft = output.haveGazeInfoRight = False
+        output.leftPreDict.Gaze.valid = output.rightPreDict.Gaze.valid = False
         sample = self.sample(output)
         self.assertFalse(sample.valid)
         self.assertIsNone(sample.position)
@@ -118,7 +118,7 @@ class ET28SampleTests(unittest.TestCase):
         self.assertEqual(row['recom_gaze_bit_mask'], 0)
         self.assertEqual(row['source_norm_pos_x'], '')
         self.assertEqual(row['source_norm_pos_y'], '')
-        self.assertEqual(row['pupil_valid'], '')
+        self.assertEqual(row['pupil_valid'], 1)
         data = json.loads(gaze_message(sample))['eye_data']
         for prefix in ('re', 'l', 'r'):
             self.assertEqual(data[f'{prefix}_gaze']['gaze_bit_mask'], 0)
@@ -126,23 +126,28 @@ class ET28SampleTests(unittest.TestCase):
 
     def test_csv_and_websocket_expose_real_monocular_coordinates_without_invented_units(self):
         output = self.output()
-        output.worldPointLeft.y, output.worldPointRight.y = 900, 150
+        output.leftPreDict.Gaze.worldPoint.y, output.rightPreDict.Gaze.worldPoint.y = 900, 150
         sample = self.sample(output)
         row = gaze_csv_row(sample, 10)
         self.assertAlmostEqual(row['timestamp'], 50)
         self.assertEqual(row['source_backend'], 'huahong_sdk')
         self.assertEqual(row['source_model'], 'HH_ET28')
+        self.assertEqual(row['source_coordinate_space'], 'world_normalized_top_left')
         self.assertEqual(row['recom_gaze_bit_mask'], 1)
         self.assertEqual((row['source_norm_pos_x'], row['source_norm_pos_y']), sample.position)
         self.assertEqual((row['left_gaze_x'], row['left_gaze_y']), (.25, .75))
         self.assertEqual((row['right_gaze_x'], row['right_gaze_y']), (.75, .125))
         for eye in ('left', 'right'):
             self.assertEqual(row[f'{eye}_gaze_bit_mask'], 1)
-            for field in ('pupil_diameter', 'pupil_diameter_mm', 'pupil_diameter_px', 'pupil_center_x',
-                          'pupil_minor_axis', 'pupil_distance', 'pupil_valid', 'origin_x', 'direction_x', 'gaze_point_z'):
+            for field in ('pupil_diameter', 'pupil_diameter_mm', 'pupil_diameter_px',
+                          'pupil_minor_axis', 'pupil_distance', 'gaze_point_z'):
                 self.assertEqual(row[f'{eye}_{field}'], '', field)
-        self.assertEqual(row['pupil_valid'], '')
-        self.assertEqual(row['pupil_center_space'], '')
+        self.assertEqual(row['left_pupil_valid'], 0)
+        self.assertEqual(row['right_pupil_valid'], 1)
+        self.assertEqual(row['left_origin_x'], 1)
+        self.assertEqual(row['left_direction_x'], 4)
+        self.assertEqual(row['right_direction_x'], '')
+        self.assertEqual(row['pupil_center_space'], 'eye_image_normalized_top_left')
         data = json.loads(gaze_message(sample))['eye_data']
         self.assertIsNone(data['l_pupil']['center'], 'Eye-info validity is independent of gaze validity')
         self.assertEqual(data['l_gaze']['gaze'], {'x': .25, 'y': .75})
@@ -160,9 +165,9 @@ class ET28SampleTests(unittest.TestCase):
 
     def test_live_pupil_centers_use_independent_eye_flags_without_unit_conversion(self):
         output = self.output()
-        output.haveEyeInfoLeft, output.haveEyeInfoRight = True, False
-        output.haveGazeInfoLeft = False
-        output.eyeInfoRight.pupilCenter = b.et28_GzTrackerPoint2d(211, 197)
+        output.leftPreDict.Pupil.pupil2d.valid, output.rightPreDict.Pupil.pupil2d.valid = True, False
+        output.leftPreDict.Gaze.valid = False
+        output.rightPreDict.Pupil.pupil2d.center = b.AiotGzTrackerPoint2d(211, 197)
         sample = self.sample(output)
         C.memset(C.byref(output), 0, C.sizeof(output))
         data = json.loads(gaze_message(sample))['eye_data']
@@ -175,16 +180,49 @@ class ET28SampleTests(unittest.TestCase):
             self.assertNotIn('dia', data[key])
             self.assertNotIn('dia_mm', data[key])
         row = gaze_csv_row(sample, 10)
-        self.assertEqual(row['left_pupil_center_x'], '')
+        self.assertEqual(row['left_pupil_center_x'], 17 / 400)
+        self.assertEqual(row['left_pupil_center_y'], 23 / 300)
+        self.assertEqual(row['left_pupil_diameter'], 31 / 400)
+        self.assertEqual(row['left_pupil_minor_axis'], 19 / 400)
         self.assertEqual(row['left_pupil_diameter_mm'], '')
-        self.assertEqual(row['pupil_center_space'], '', 'Unverified live coordinates must not enter normalized CSV fields')
+
+    def test_csv_keeps_pupil_flags_independent_and_preserves_native_events(self):
+        output = self.output()
+        left = output.leftPreDict
+        left.timeStamp = 320000
+        left.Pupil.pupil3d.valid = True
+        left.Pupil.pupil3d.diameter = 3.25
+        left.Blink.eyelidOpenDegree = 27
+        left.Blink.blinkDetected = True
+        left.Blink.blinkTimeRange.startTimeStamp = 200000
+        left.Blink.blinkTimeRange.endTimeStamp = 310000
+        left.Eyelid.valid = True
+        left.Eyelid.contour[0] = b.AiotGzTrackerPoint2d(12, 34)
+        output.rightPreDict.Blink.eyelidOpenDegree = -1
+        output.mergeGaze.valid = True
+        output.mergeGaze.worldPoint = b.AiotGzTrackerPoint2d(600, 700)
+        output.gazeEvent.saccade.valid = True
+        output.gazeEvent.saccade.peakVelocityDeg = 230
+        row = gaze_csv_row(self.sample(output), 10)
+        self.assertEqual(row['left_pupil_diameter_mm'], 3.25)
+        self.assertEqual(row['left_pupil_diameter_px'], '')
+        self.assertEqual(row['left_pupil_bit_mask'], 8)
+        self.assertEqual(row['left_openness'], 27)
+        self.assertEqual(row['right_openness'], '')
+        self.assertEqual(row['left_et28_device_timestamp'], 320000)
+        self.assertEqual(json.loads(row['left_et28_blink_event'])['startTimeStamp'], 200000)
+        self.assertEqual(json.loads(row['left_et28_eyelid_contour'])[0], [12, 34])
+        self.assertEqual(json.loads(row['et28_merged_gaze'])['worldPoint'], [600, 700])
+        self.assertEqual(json.loads(row['et28_gaze_events'])['saccade']['peakVelocityDeg'], 230)
+        self.assertEqual(row['saccade_duration_ms'], '')
+        self.assertEqual((row['recom_gaze_x'], row['recom_gaze_y']), (.5, .5))
 
     def test_missing_and_nonfinite_pupil_centers_are_null_but_real_zero_is_preserved(self):
         for center in ((float('nan'), 20), (20, float('inf')), (float('-inf'), 20), (0, 0)):
             with self.subTest(center=center):
                 output = self.output()
-                output.haveEyeInfoLeft = True
-                output.eyeInfoLeft.pupilCenter = b.et28_GzTrackerPoint2d(*center)
+                output.leftPreDict.Pupil.pupil2d.valid = True
+                output.leftPreDict.Pupil.pupil2d.center = b.AiotGzTrackerPoint2d(*center)
                 data = json.loads(gaze_message(self.sample(output)))['eye_data']
                 self.assertEqual(data['l_pupil']['center'], {'x': 0, 'y': 0} if center == (0, 0) else None)
         sample = replace(self.sample(), monocular={})
@@ -199,21 +237,21 @@ class ET28SampleTests(unittest.TestCase):
                 self.fail('Node and TypeScript required')
             self.skipTest('Node and TypeScript required')
         output = self.output()
-        output.haveEyeInfoLeft = output.haveEyeInfoRight = True
-        output.eyeInfoRight.pupilCenter = b.et28_GzTrackerPoint2d(211, 197)
+        output.leftPreDict.Pupil.pupil2d.valid = output.rightPreDict.Pupil.pupil2d.valid = True
+        output.rightPreDict.Pupil.pupil2d.center = b.AiotGzTrackerPoint2d(211, 197)
         cases = []
         def add_case(left, right):
             cases.append({'message': json.loads(gaze_message(self.sample(output))),
                           'left': left, 'right': right})
         add_case([17, 23], [211, 197])
-        output.haveGazeInfoLeft = False
+        output.leftPreDict.Gaze.valid = False
         add_case([17, 23], [211, 197])
-        output.haveEyeInfoLeft = False
+        output.leftPreDict.Pupil.pupil2d.valid = False
         add_case(None, [211, 197])
-        output.eyeInfoRight.pupilCenter.x = float('nan')
+        output.rightPreDict.Pupil.pupil2d.center.x = float('nan')
         add_case(None, None)
-        output.haveEyeInfoLeft = True
-        output.eyeInfoLeft.pupilCenter = b.et28_GzTrackerPoint2d(0, 0)
+        output.leftPreDict.Pupil.pupil2d.valid = True
+        output.leftPreDict.Pupil.pupil2d.center = b.AiotGzTrackerPoint2d(0, 0)
         add_case([0, 0], None)
         legacy = GazeSample(replace(self.identity(), source='HH_ET10C'), (.5, .25),
                             'screen_normalized_top_left', None, True, ('left',))
@@ -232,6 +270,7 @@ class ET28SampleTests(unittest.TestCase):
                 self.assertEqual((row['recom_gaze_x'], row['recom_gaze_y']), position or ('', ''))
                 self.assertEqual((row['source_norm_pos_x'], row['source_norm_pos_y']), position or ('', ''))
                 self.assertEqual(row['source_backend'], 'huahong_sdk')
+                self.assertEqual(row['source_coordinate_space'], 'screen_normalized_top_left')
                 self.assertEqual(row['left_gaze_x'], '')
                 self.assertEqual(row['recom_gaze_bit_mask'], 1 if position is not None else 0)
                 for eye in ('recom', 'left', 'right'):
@@ -251,11 +290,11 @@ class ET28SampleTests(unittest.TestCase):
                 self.fail('Node and TypeScript required')
             self.skipTest('Node and TypeScript required')
         output = self.output()
-        output.haveGazeInfoRight = False
+        output.rightPreDict.Gaze.valid = False
         single_eye = self.sample(output)
-        output.worldPointLeft = b.et28_GzTrackerPoint2d(0, 0)
+        output.leftPreDict.Gaze.worldPoint = b.AiotGzTrackerPoint2d(0, 0)
         corner = self.sample(output)
-        output.haveGazeInfoLeft = False
+        output.leftPreDict.Gaze.valid = False
         missing = self.sample(output)
         cases = []
         for sample in (self.sample(), single_eye, corner, missing):
@@ -295,7 +334,8 @@ class ET28SampleTests(unittest.TestCase):
             self.assertEqual(row['source_backend'], 'huahong_sdk')
             self.assertEqual(float(row['left_gaze_x']), .25)
             self.assertEqual(float(row['right_gaze_y']), .75)
-            self.assertEqual(row['pupil_valid'], '')
+            self.assertEqual(row['pupil_valid'], '1')
+            self.assertEqual(row['right_pupil_bit_mask'], '1')
             self.assertEqual(row['recom_gaze_bit_mask'], '1')
             for eye in ('recom', 'left', 'right'):
                 for column in ('gaze_point', 'raw_point', 'smooth_point'):

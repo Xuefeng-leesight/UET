@@ -80,6 +80,7 @@ async function pagePreview() {
   } }).outputText;
   const callback = vm.runInNewContext(compiled, { ...exportData, projectDir: root, isEn: true,
     exportModality: 'eye-tracking', previewOperationRef: { current: 0 },
+    exportGazeFrame: record => (record.exportCsvPath ? 'top-left-normalized' : undefined),
     ipcClient: { isAvailable: () => true, previewRecordCsv: async payload => {
       request = payload;
       return handlers['preview-record-csv']({}, payload);

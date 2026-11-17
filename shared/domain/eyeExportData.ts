@@ -97,10 +97,17 @@ const blinkActive = (read: ReadCell, row: string[], ...keys: string[]) => {
 }
 const validity = (read: ReadCell, row: string[]): boolean | null => {
   const model = read(row, 'source_model')
-  const value = hasIndependentEvents(read, row)
-    ? finiteCsvNumber(read(row, 'gaze_valid', ...(model === 'PupilCore' ? ['pupil_valid'] : ['recom_gaze_bit_mask'])))
-    : finiteCsvNumber(read(row, 'fixation_state', 'fixationState'))
-  return value === null ? null : value !== 0
+  if (hasIndependentEvents(read, row)) {
+    const value = finiteCsvNumber(read(row, 'gaze_valid', ...(model === 'PupilCore' ? ['pupil_valid'] : ['recom_gaze_bit_mask'])))
+    return value === null ? null : value !== 0
+  }
+  // 7invensun: bit 0 of the recommended gaze mask says whether the sample has a
+  // gaze point. fixation_state 0 only means "neither fixation nor saccade", so it
+  // must not mark a valid sample invalid. Files without the mask keep the old rule.
+  const mask = finiteCsvNumber(read(row, 'recom_gaze_bit_mask', 'recomGazeBitMask'))
+  if (mask !== null) return (Math.trunc(mask) & 1) === 1
+  const state = finiteCsvNumber(read(row, 'fixation_state', 'fixationState'))
+  return state === null ? null : state !== 0
 }
 
 /** Preserve legacy coordinate/ms numbers, and expose normalized/ms separately with honest units. */
@@ -119,6 +126,9 @@ export function createExportMotionDeriver(headers: Map<string, number>) {
     const y = finiteCsvNumber(read(row, 'recom_gaze_y', 'recomGazeY'))
     const time = timeMs(read, row, headers.has('video_time_ms'))
     const normalized = normalizedSpace(read, row)
+    const et28 = read(row, 'source_model') === 'HH_ET28'
+    const width = et28 ? finiteCsvNumber(read(row, 'world_image_width')) : null
+    const height = et28 ? finiteCsvNumber(read(row, 'world_image_height')) : null
     if (valid === false || (hasIndependentEvents(read, row) && valid !== true) ||
         blinkActive(read, row, 'blink') || blinkActive(read, row, 'left_blink', 'leftBlink') ||
         blinkActive(read, row, 'right_blink', 'rightBlink') ||
@@ -131,7 +141,8 @@ export function createExportMotionDeriver(headers: Map<string, number>) {
       read(row, 'stimulus'), read(row, 'gaze_coordinate_space'), unit,
       // A monocular/bino model switch can move the fitted point without actual eye motion.
       // Pupil topics identify the actual contributing eye (0, 1 or 01), including historical files.
-      read(row, 'source_topic'), read(row, 'gaze_mapping_mode'), read(row, 'gaze_rejected_eye_ids')].join('|')
+      read(row, 'source_topic'), read(row, 'gaze_mapping_mode'), read(row, 'gaze_rejected_eye_ids'),
+      ...(et28 ? [width, height, read(row, 'left_gaze_bit_mask'), read(row, 'right_gaze_bit_mask')] : [])].join('|')
     const before = previous
     previous = { x, y, time, context }
     // Native speed was computed before source-time CSV sorting. Its empty cell
@@ -149,6 +160,9 @@ export function createExportMotionDeriver(headers: Map<string, number>) {
       out.gaze_velocity_unit = unit
     }
     if (unit === 'normalized/ms') out.gaze_velocity_normalized_ms = speed
+    if (et28 && width !== null && height !== null && width > 0 && height > 0) {
+      out.gaze_velocity_px_ms = String(Math.hypot((x - before.x) * width, (y - before.y) * height) / deltaMs)
+    }
     return out
   }
 }
@@ -327,7 +341,33 @@ export function createExportSmoothingDeriver(headers: Map<string, number>, conte
 export function resolveExportMeasurement(key: string, raw: string, row: string[], headers: Map<string, number>, context: ExportMeasurementContext = {}): string {
   const read = makeExportRowReader(headers)
   if (key === 'timestamp' && headers.has('video_time_ms')) return read(row, 'video_time_ms')
-  if (read(row, 'source_model') !== 'PupilCore') return raw
+  const model = read(row, 'source_model')
+  if (model === 'HH_ET28') {
+    const event = read(row, 'source_event_type')
+    if (key === 'fixation_state' && event === 'invalid') return '0'
+    if (key === 'invalid_gaze_index' || key === 'invalid_gaze_duration_ms') {
+      return event === 'invalid'
+        ? read(row, key === 'invalid_gaze_index' ? 'source_event_id' : 'source_event_duration_ms')
+        : ''
+    }
+    const gaze = /^(recom|left|right)_gaze_(bit_mask|point_[xy])$/.exec(key)
+    if (gaze) {
+      const [, eye, field] = gaze
+      const available = read(row, `${eye}_gaze_bit_mask`)
+      const coordinates = [...'xy'].map(axis => read(row, `${eye}_gaze_${axis}`))
+      const pointValid = available === '1' && coordinates.every(value => {
+        const number = finiteCsvNumber(value)
+        return number !== null && number >= 0 && number <= 1
+      })
+      if (field !== 'bit_mask') return pointValid ? coordinates[field === 'point_x' ? 0 : 1] : ''
+      if (!available) return ''
+      const hasVector = (name: string) => [...'xyz'].every(axis =>
+        finiteCsvNumber(read(row, `${eye}_${name}_${axis}`)) !== null)
+      return String((pointValid ? 1 : 0) | (hasVector('origin') ? 8 : 0) | (hasVector('direction') ? 16 : 0))
+    }
+    if (/^(left|right)_blink$/.test(key)) return raw === '1' ? '3' : raw
+  }
+  if (model !== 'PupilCore') return raw
   if (/^(left|right)_(openness|eyelid_up|eyelid_down)$/.test(key) ||
       ['gyro_timestamp', 'gyro_quaternion', 'gyroscope', 'acceleration', 'magnetometer'].includes(key)) return ''
   const finiteText = (value: string, positive = false): string => {

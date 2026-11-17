@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import queue
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -22,6 +23,9 @@ from ..domain.samples import EyeEventSample, GazeSample, PupilSample, VideoFrame
 from .pupil_csv import CSV_FIELDS, gaze_csv_row
 from .pupil_recovery import RecordingLease, atomic_json, write_gaze_csv
 from .pupil_events import append_events, order_csv
+from .et28_csv_events import append_et28_events
+from .seven_invensun_layout import internal_csv_path, write_seven_invensun_csv
+from .recording_workspace import remove_sidecar, sidecar_for
 from .pupil_video_verification import verify_video
 from .pupil_metrics import journal_metrics
 from .recording_communication import append_communications, validate_communication
@@ -62,10 +66,17 @@ class PupilRecorder:
         if first_frame.width % 2 or first_frame.height % 2:
             raise ValueError("H.264 yuv420p recording requires even dimensions")
         self.timeline = FrameTimeline(first_frame, fps, max_gap_s)
+        # Wall clock of the first video frame (the recorder starts on it). The
+        # source clocks are monotonic, so this is what dates the 7invensun CSV.
+        self.started_wall_ms = time.time() * 1000
         self.directory, self.name = Path(directory).resolve(), name
-        self.sidecar = self.directory / f"{name}.pupil"
+        # Working files stay outside the project (like the 7invensun recorder, the
+        # recordings directory only gets the finished csv/mp4/meta).
+        self.sidecar = sidecar_for(self.directory, name)
         self.video_path = self.directory / f"{name}.mp4"
         self.csv_path = self.directory / f"{name}.csv"
+        # The recorder's own CSV; csv_path is built from it in the 7invensun layout.
+        self.internal_csv_path = internal_csv_path(self.sidecar)
         self.meta_path = self.directory / f"{name}.meta.json"
         self.ffmpeg, self.ffprobe = ffmpeg, ffprobe
         self._queue = queue.Queue(maxsize=queue_size)
@@ -157,6 +168,7 @@ class PupilRecorder:
         if any(p.exists() for p in (self.video_path, self.csv_path, self.meta_path, self.sidecar)):
             raise FileExistsError("Recording already exists; refusing to overwrite")
         # Exclusive directory reservation also serializes competing recorder instances.
+        self.sidecar.parent.mkdir(parents=True, exist_ok=True)
         self.sidecar.mkdir()
         self._lease = RecordingLease(self.sidecar)
         self.state = "preparing"
@@ -259,6 +271,7 @@ class PupilRecorder:
                                 "connectionGeneration": self._first_frame.identity.generation,
                                 "encodedWidth": self._first_frame.width, "encodedHeight": self._first_frame.height,
                                 "videoSamplingRateHz": self.timeline.fps,
+                                "recordingStartedAtMs": self.started_wall_ms,
                                 "coordinateSpace": "world_normalized_top_left"}
                 with self.meta_path.open("x", encoding="utf-8") as metadata_file:
                     self._meta_owned = True
@@ -269,7 +282,7 @@ class PupilRecorder:
                 self._save_context()
                 if self.calibration_data is not None:
                     open_file("calibration.msgpack", "xb").write(msgpack.packb(self.calibration_data, use_bin_type=True))
-                csv_file = files.enter_context(self.csv_path.open("x+", newline="", encoding="utf-8"))
+                csv_file = files.enter_context(self.internal_csv_path.open("x+", newline="", encoding="utf-8"))
                 csv_writer = csv.DictWriter(csv_file, fieldnames=CSV_FIELDS)
                 csv_writer.writeheader()
                 source_file = open_file("normalized-samples.jsonl", encoding="utf-8")
@@ -356,6 +369,8 @@ class PupilRecorder:
                 self._gaze_outside = counts["gazeOutsideVideo"]
                 event_spool.flush()
                 event_metadata = append_events(self.sidecar / "events-spool.jsonl", csv_file, self.timeline.t0, duration)
+                if self.source_model == 'HH_ET28':
+                    event_metadata.update(append_et28_events(gaze_spool, csv_file, self.timeline.t0, duration))
                 event_metadata.update(append_communications(self.sidecar / 'communication-events.jsonl', csv_file,
                     duration, self.name, self._first_frame.identity.generation, self.timeline.t0, self.source_model))
                 order_csv(csv_file, self.sidecar)
@@ -367,6 +382,17 @@ class PupilRecorder:
                 if event_metadata.get('communicationCaptureErrors'):
                     self._set_error('Communication capture incomplete; saved video and available events retained: '
                                     + '; '.join(event_metadata['communicationCaptureErrors']))
+            # The files above are closed. <name>.csv is built from the recorder CSV in
+            # the 7invensun layout. On failure it receives a copy of the recorder CSV
+            # (older layout), so the recording stays complete; only this step is reported.
+            phase = "standard-csv"
+            try:
+                event_metadata.update(write_seven_invensun_csv(
+                    self.csv_path, self.internal_csv_path, width=self._first_frame.width, height=self._first_frame.height,
+                    started_wall_ms=self.started_wall_ms))
+            except Exception as exc:
+                logging.exception("recording.seven_invensun_csv_failed")
+                event_metadata["standardCsvError"] = str(exc)
         except Exception as exc:
             logging.exception("recording.worker_failed phase=%s", phase)
             self._set_error(f"{phase}: {exc}")
@@ -381,6 +407,13 @@ class PupilRecorder:
                         process.stdin.close()
                 except (OSError, subprocess.TimeoutExpired) as exc:
                     self._set_error(f"Encoder cleanup failed: {exc}")
+            if video_verified and not self.csv_path.exists() and self.internal_csv_path.exists():
+                # Finalization stopped before the 7invensun file; keep the samples
+                # the recorder already wrote with the saved video.
+                try:
+                    shutil.copyfile(self.internal_csv_path, self.csv_path)
+                except OSError as exc:
+                    self._set_error(f"CSV copy failed: {exc}")
             self.state = "partial" if self._error and video_verified else "failed" if self._error else "complete"
             huahong = self.source_model in ("HH_ET10C", "HH_ET28")
             self.result = {**self.metadata, **event_metadata, **quality_metadata, "status": self.state, "error": self._error, "video_path": str(self.video_path),
@@ -392,7 +425,7 @@ class PupilRecorder:
                            "deviceModel": self.source_model, "deviceType": self.metadata.get("deviceType", "眼镜式"), "productIntegration": True,
                            "calibrationVerified": self.metadata.get("calibrationVerified", False),
                            "markers": list(self.markers), "videoSamplingRateHz": self.timeline.fps,
-                           "sourceTimeOriginS": self.timeline.t0,
+                           "sourceTimeOriginS": self.timeline.t0, "recordingStartedAtMs": self.started_wall_ms,
                            **({"pupilDataSchemaVersion": 4,
                                "standardExportContract": "original_133_columns; eye-image-normalized pupil geometry; 7invensun member validity bits; unsupported physical quantities remain missing",
                                "measurementAvailability": {
@@ -411,14 +444,18 @@ class PupilRecorder:
                            "encodedWidth": self._first_frame.width, "encodedHeight": self._first_frame.height,
                            "coordinateSpace": "screen_normalized_top_left" if self.source_model == "HH_ET10C" else "world_normalized_top_left",
                            "gazeCompatibilityAliases": (
-                               "Huahong live/replay raw/smooth are normalized 2D compatibility aliases; CSV gaze_x/y only for recommended/available monocular gaze; 3D/raw/smooth point fields empty"
+                               "Huahong live/replay raw/smooth are normalized 2D compatibility aliases; CSV gaze_x/y for recommended/available monocular gaze; 3D/raw/smooth point fields empty"
                                if huahong else "native live/replay recommended=raw in normalized 2D; native CSV raw=calibrated 3D point; independent smoothing unavailable"
                                if self.source_info.get('backend') == 'native' else "Capture live/replay recommended=raw in normalized 2D; CSV 3D/raw points require actual 3D geometry; independent smoothing unavailable"),
                            **({"measurementSemantics": {
-                               "pupilGeometry": "not mapped to CSV; vendor units unverified",
+                               "pupilGeometry": (
+                                   "ET28 pupil centres are normalized by eye-image width/height; ellipse axes by eye-image width; valid SDK 3D diameter in mm"
+                                   if self.source_model == "HH_ET28" else "ET10 pupil geometry not exposed by this adapter"),
                                "vendorEyeData": (
-                                   "ET28 eyeInfo/sightLine retained as vendor fields in normalized-samples.jsonl; units unverified"
+                                   "ET28 eyeInfo/sightLine retained in normalized-samples.jsonl; CSV ray origin and direction use SDK coordinates without conversion"
                                    if self.source_model == "HH_ET28" else "ET10 pupil/eye geometry not exposed by this adapter"),
+                               **({"vendorEvents": "ET28 raw events use SDK milliseconds. Complete in-video intervals are also written as timed event rows, aligned to the host clock at the reporting callback."}
+                                  if self.source_model == "HH_ET28" else {}),
                                "csvGaze": "normalized 2D gaze_x/y; bit 0 indicates validity; physical 3D/raw/smooth points unavailable"}}
                               if huahong else {"measurementSemantics": {
                                "pupilCenter": "eye image normalized, top-left; exact eye-frame size or original 2D detector norm_pos required",
@@ -443,5 +480,9 @@ class PupilRecorder:
                 self.result.update(status="failed", error=f"Metadata finalization failed: {exc}")
             if self._lease:
                 self._lease.close()
+            # A saved recording no longer needs its working files. Keep them only when
+            # nothing usable was saved, for diagnosis; old ones are swept later.
+            if video_verified and self.csv_path.exists():
+                remove_sidecar(self.sidecar)
             self._ready.set()
             self._done.set()

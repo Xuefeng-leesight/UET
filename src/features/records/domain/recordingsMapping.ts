@@ -82,6 +82,7 @@ export function mapLoadedRecordings(records: unknown): RecordingRecord[] {
       mp4Path: optionalString(record.mp4Path),
       mp4Url: optionalString(record.mp4Url),
       csvPath: optionalString(record.csvPath),
+      exportCsvPath: optionalString(record.exportCsvPath),
       markers: normalizeMarkers(record.markers),
       timelineMarkers: normalizeTimelineMarkers(record.timelineMarkers ?? []),
       timelineSegments: normalizeTimeSegments(record.timelineSegments ?? []),

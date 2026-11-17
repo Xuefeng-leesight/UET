@@ -56,7 +56,7 @@ import FullscreenRecordingOverlay from '@/features/recording/FullscreenRecording
 import FullscreenCalibrationOverlay from '@/features/recording/FullscreenCalibrationOverlay';
 import { CALIB_INTERVAL_MS, CALIB_POINTS } from '@/features/recording/domain/calibrationConstants';
 import { normalizeCalibrationPointStyle } from '@/features/recording/domain/calibrationPointStyle';
-import { parseCalibrationPayload, type CalibrationScores } from '@/features/recording/domain/calibrationScores';
+import { parseCalibrationPayload, type CalibrationScores, type Et28CalibrationQuality } from '@/features/recording/domain/calibrationScores';
 import { MONITOR_TILE_MODALITY, normalizeFacialRecordingSettings, type MonitorTileId } from '@/features/recording/domain/recordingModules';
 import { drawGazePaths, drawHeatmap } from '@/features/analysis/visual/heatmapRendering';
 import { cancelCalibration, createCalibrationController, getCalibrationPointsCount, getPupilCalibrationSequence, isCardCalibrationType } from '@/features/recording/domain/calibrationFlow';
@@ -66,6 +66,7 @@ import {
   connectEyeWebSocket,
   connectEncodedVideoWebSocket,
   connectImageWebSocket,
+  describeOutOfRangeCalibrationScores,
   sendCmdOverWs,
   sendCmdWithResponse,
   stopDeviceCommand,
@@ -245,6 +246,8 @@ const normalizeNameForCompare = (value: unknown): string =>
 
 // Silent SDK restarts allowed per user-started A8 calibration.
 const A8_STALL_RECOVERY_MAX = 2;
+const A8_RECOVERY_RESTART_DELAY_MS = 1500;
+type PointFailureCause = 'error' | 'stall' | 'timeout';
 
 const getCalibrationSequence = (points: number): number[] => {
   if (points === 1) return [4];
@@ -587,6 +590,25 @@ const MrtApp: React.FC = () => {
       confirmVariant,
     });
   }, [isEn, normalizeNoticeText]);
+
+  const showEt28CalibrationResult = useCallback((quality: Et28CalibrationQuality | null, points: number) => {
+    const labels = language === 'ja-JP'
+      ? { title: 'キャリブレーション完了', point: 'ポイント', left: '左目', right: '右目', missing: '評価なし', grades: ['良好', '普通', '低精度'] }
+      : isEn
+        ? { title: 'Calibration complete', point: 'Point', left: 'Left', right: 'Right', missing: 'No score', grades: ['Perfect', 'Common', 'Low accuracy'] }
+        : { title: '校准通过', point: '第', left: '左眼', right: '右眼', missing: '无评分', grades: ['良好', '一般', '精度较低'] };
+    const describe = (point: Et28CalibrationQuality['left']['points'][number] | undefined) => {
+      if (!point) return labels.missing;
+      const bias = point.bias.map((value) => value === null ? '—' : value.toFixed(1));
+      return `${point.score} · ${labels.grades[point.status] ?? `SDK ${point.status}`} · (${bias.join(', ')}) px`;
+    };
+    const lines = Array.from({ length: quality?.left.count ?? points }, (_, index) => [
+      language === 'zh-CN' ? `第 ${index + 1} 点` : `${labels.point} ${index + 1}`,
+      `${labels.left}  ${describe(quality?.left.points[index])}`,
+      `${labels.right}  ${describe(quality?.right.points[index])}`,
+    ].join('\n'));
+    showNotice(lines.join('\n\n'), labels.title);
+  }, [isEn, language, showNotice]);
 
 
   useEffect(() => {
@@ -1228,8 +1250,43 @@ const MrtApp: React.FC = () => {
   // correction did not take effect for this SDK session. The calibration screen
   // stays up while the SDK is restarted in a fresh process and the calibration
   // starts again from the centre (at most A8_STALL_RECOVERY_MAX times).
-  const onPointStallRef = useRef<((pointIndex: number) => void) | null>(null);
-  const a8StallRecoveryRef = useRef({ count: 0, running: false, generation: 0 });
+  // Returns whether a recovery was started.
+  const onPointStallRef = useRef<((pointIndex: number) => boolean) | null>(null);
+  // restarted: the device came back in a fresh SDK process during this
+  // calibration, so the service no longer holds the previous coefficient.
+  const a8StallRecoveryRef = useRef({ count: 0, running: false, generation: 0, restarted: false });
+  const calibrationCoeLiveRef = useRef(calibrationCoe);
+  calibrationCoeLiveRef.current = calibrationCoe;
+  const isCameraOnLiveRef = useRef(isCameraOn);
+  isCameraOnLiveRef.current = isCameraOn;
+  // After an A8 restart, a calibration that ends without a new coefficient
+  // (cancelled, failed or rejected) re-applies the subject's previous one so
+  // live tracking keeps running. Returns whether a re-apply was requested.
+  const restoreTrackingAfterA8Restart = useCallback((reason: string): boolean => {
+    const recovery = a8StallRecoveryRef.current;
+    if (!recovery.restarted) return false;
+    recovery.restarted = false;
+    const coe = String(calibrationCoeLiveRef.current || '').trim();
+    if (!coe || !isCameraOnLiveRef.current) return false;
+    void sendCmdWithResponse({
+      wsCmdRef,
+      id: 'start_tracking',
+      args: { coe },
+      timeoutMs: 5000,
+      debugEventPrefix: 'eye:restore-tracking-command',
+    }).then((result) => {
+      if (result.ok) activeTrackingCoeRef.current = coe;
+      void ipcClient.videoDebugLog({
+        event: 'calibration:a8-restart-tracking-restored',
+        details: { reason, ok: result.ok, error: result.ok ? null : (result.error || null) },
+      });
+    });
+    return true;
+  }, [activeTrackingCoeRef]);
+  // Auto calibration: a point that fails (SDK -10/-11, A8 stall or point
+  // timeout) restarts the A8 SDK like a stall; once restarts are used up (or
+  // on other devices) calibration stops without computing a score.
+  const onPointErrorRef = useRef<((pointIndex: number, error: number, cause?: PointFailureCause) => void) | null>(null);
   const simulateCalibrationRef = useRef<{
     active: boolean;
     sequence: number[];
@@ -1279,12 +1336,19 @@ const MrtApp: React.FC = () => {
         setCardDetectionStatus('error');
         setCardDetectionMessage('命令通道未连接，未提交当前校准点，请重试');
       },
-      onPointTimeout: () => {
+      onPointTimeout: (pointIndex) => {
+        // Auto mode: skipping a timed-out point only produces a rejected 0/0
+        // result, so it is handled like a failed point instead.
+        if (activeDeviceProfile.calibrationMode !== 'click') {
+          onPointErrorRef.current?.(pointIndex, -1, 'timeout');
+          return true;
+        }
         cardSubmittedPointRef.current = null;
         setCardDetectionStatus('submitting');
         setCardDetectionMessage('当前校准点采集超时，正在继续下一个校准点');
+        return false;
       },
-      onPointStall: (pointIndex) => onPointStallRef.current?.(pointIndex),
+      onPointStall: (pointIndex) => onPointErrorRef.current?.(pointIndex, 0, 'stall'),
     });
   }, [sendCmd, activeDeviceProfile.calibrationMode]);
   const handleInlineCalibrationPoint = useCallback(
@@ -1368,6 +1432,7 @@ const MrtApp: React.FC = () => {
         point: cardDetectedPoint,
         status: cardDetectionStatusRef.current,
         calibrationPointIndex: calibStateRef.current.pointIndex,
+        pointAttempt: (calibStateRef.current.pointAttempt ?? 0) + 1,
         calibrationArrayIndex: calibStateRef.current.arrIndex,
         videoPreviewMode,
         videoPreviewFrameSize,
@@ -1606,7 +1671,11 @@ const MrtApp: React.FC = () => {
       setCalibrationScores,
       onTrackingCoeActivated: (coe) => {
         activeTrackingCoeRef.current = String(coe || '').trim() || null;
+        // The new calibration is active; closing its result screen (which
+        // also cancels) must not bring the previous one back.
+        a8StallRecoveryRef.current.restarted = false;
       },
+      onCalibrationScoreRejected: () => restoreTrackingAfterA8Restart('score-rejected'),
       onDeviceError: (message) => {
         deviceConnectionRequestedRef.current = false;
         activeTrackingCoeRef.current = null;
@@ -1625,6 +1694,7 @@ const MrtApp: React.FC = () => {
         }
       },
       onCalibrationTrackerReady: setIsCalibrationTrackerReady,
+      onEt28CalibrationResult: showEt28CalibrationResult,
       onCalibrationPointFinished: (pointIndex) => {
         const completedPoint = cardSubmittedPointRef.current;
         if (!completedPoint) return;
@@ -1657,11 +1727,12 @@ const MrtApp: React.FC = () => {
         // Per-eye completion remains available in the debug log. Avoid exposing
         // transient SDK callback details as a user-facing calibration status.
       },
+      onCalibrationPointError: ({ pointIndex, error }) => onPointErrorRef.current?.(pointIndex, error),
       calibStateRef,
       processPoint,
       advanceCalibration,
     });
-  }, [wsIp, wsCmdPort, activeDeviceModel, activeDeviceProfile.calibrationMode, processPoint, advanceCalibration, showNotice]);
+  }, [wsIp, wsCmdPort, activeDeviceModel, activeDeviceProfile.calibrationMode, processPoint, advanceCalibration, showNotice, showEt28CalibrationResult, restoreTrackingAfterA8Restart]);
 
   const ensureCmdWsReady = useCallback(
     async (timeoutMs: number): Promise<boolean> => {
@@ -2426,6 +2497,7 @@ const MrtApp: React.FC = () => {
       const res = await ipcClient.loadCalibrationResult({
         experimentDir,
         subjectId: currentRecordingSubjectId || undefined,
+        deviceModel: activeDeviceModel,
       });
       if (!res || !res.ok) {
         return { coe: null, scores: null };
@@ -2434,7 +2506,7 @@ const MrtApp: React.FC = () => {
     } catch {
       return { coe: null, scores: null };
     }
-  }, [simulateMode, activeDataDir, currentRecordingSubjectId]);
+  }, [simulateMode, activeDataDir, currentRecordingSubjectId, activeDeviceModel]);
 
   const startRecordingCore = useCallback(async (operationId: string) => {
     const isCurrentRecording = () => {
@@ -2765,11 +2837,16 @@ const MrtApp: React.FC = () => {
     });
   }, [eyeDataStore, isRecording, isRecordingCaptureReady, recordingSettings.saveRawData]);
 
+  // The device whose calibration produced the current coe/scores.
+  const calibrationDeviceModelRef = useRef<string | null>(null);
   useEffect(() => {
     if (!recordingSettings.saveEyeCalibration) return;
     if (simulateMode) return;
     if (calibrationState !== 'finished') return;
     if (isCalibrationTestMode && !(activeDeviceModel === 'PupilCore' && calibrationScores?.pupilScores?.validation)) return;
+    // Only the device that ran this calibration may store it; after switching
+    // devices the state still shows 'finished' with the old device's result.
+    if (calibrationDeviceModelRef.current !== activeDeviceModel) return;
     const experimentDir = activeDataDir || '';
     if (!experimentDir) return;
     if (!ipcClient.isAvailable()) return;
@@ -2780,6 +2857,8 @@ const MrtApp: React.FC = () => {
       scores: calibrationScores,
       subjectId: currentRecordingSubjectId || undefined,
       subjectName: currentRecordingSubjectName || undefined,
+      // Calibrations are kept per subject and device; switching devices loads the matching one.
+      deviceModel: activeDeviceModel,
     };
     void ipcClient.saveCalibrationResult({
       experimentDir,
@@ -2818,7 +2897,7 @@ const MrtApp: React.FC = () => {
     setCalibrationCoe(null);
     setCalibrationScores(null);
     ipcClient
-      .loadCalibrationResult({ experimentDir, subjectId: currentRecordingSubjectId || undefined })
+      .loadCalibrationResult({ experimentDir, subjectId: currentRecordingSubjectId || undefined, deviceModel: activeDeviceModel })
       .then((res) => {
         if (cancelled) return;
         if (!res || !res.ok || !res.result || typeof res.result !== 'object') {
@@ -2828,6 +2907,14 @@ const MrtApp: React.FC = () => {
         }
 
         const parsed = parseCalibrationPayload(res.result);
+        // 7invensun desktop: older versions could save a rejected (e.g. 0/0)
+        // calibration; do not reuse it for tracking or recording.
+        const isDesktopModel = !['PupilCore', 'HH_ET10C', 'HH_ET28'].includes(activeDeviceModel);
+        if (isDesktopModel && parsed.scores && describeOutOfRangeCalibrationScores(parsed.scores.left, parsed.scores.right)) {
+          setCalibrationCoe(null);
+          setCalibrationScores(null);
+          return;
+        }
         setCalibrationCoe(parsed.coe);
         setCalibrationScores(parsed.scores);
       })
@@ -2840,13 +2927,16 @@ const MrtApp: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeDataDir, simulateMode, currentRecordingSubjectId]);
+    // Switching device reloads this subject's calibration for that device.
+  }, [activeDataDir, simulateMode, currentRecordingSubjectId, activeDeviceModel]);
 
   const handleStartCalibration = useCallback(async (validation = false) => {
     if (calibrationStartingRef.current || calibrationState === 'calibrating') return;
     calibrationStartingRef.current = true;
+    calibrationDeviceModelRef.current = activeDeviceModel;
     setIsCalibrationStarting(true);
     a8StallRecoveryRef.current.count = 0;
+    a8StallRecoveryRef.current.restarted = false;
     calibStateRef.current.skipNextInterval = false;
     try {
     if (!simulateMode) {
@@ -2992,6 +3082,9 @@ const MrtApp: React.FC = () => {
     simulateCalibrationRef.current = { active: false, sequence: [], step: -1 };
     // Stops an A8 stall recovery in progress from starting a new calibration.
     a8StallRecoveryRef.current.generation += 1;
+    // A recovery still restarting the device restores tracking itself once the
+    // device is back; otherwise do it here, after the cancel command below.
+    const restoreAfterRestart = !a8StallRecoveryRef.current.running;
     // cancelCalibration drops the pending point for every device.
     if (activeDeviceModel === 'PupilCore') cardSubmittedPointRef.current = null;
     cancelCalibration({
@@ -3001,17 +3094,18 @@ const MrtApp: React.FC = () => {
       sendCmd,
       exitFullscreen: useFullscreenCalibration,
     });
-  }, [sendCmd, clearSimulateCalibAnim, clearCalibrationFullscreenTimer, useFullscreenCalibration, activeDeviceModel]);
+    if (restoreAfterRestart) restoreTrackingAfterA8Restart('cancel');
+  }, [sendCmd, clearSimulateCalibAnim, clearCalibrationFullscreenTimer, useFullscreenCalibration, activeDeviceModel, restoreTrackingAfterA8Restart]);
 
   const calibrationStateLiveRef = useRef(calibrationState);
   calibrationStateLiveRef.current = calibrationState;
 
   useEffect(() => {
     onPointStallRef.current = (pointIndex: number) => {
-      if (activeDeviceModel !== 'A8' || isCalibrationTestMode || simulateMode) return;
+      if (activeDeviceModel !== 'A8' || isCalibrationTestMode || simulateMode) return false;
       const recovery = a8StallRecoveryRef.current;
-      // After the retries are used up the normal point timeout takes over.
-      if (recovery.running || recovery.count >= A8_STALL_RECOVERY_MAX) return;
+      // Returns false once the restarts are used up; the caller then ends calibration.
+      if (recovery.running || recovery.count >= A8_STALL_RECOVERY_MAX) return false;
       recovery.count += 1;
       recovery.running = true;
       recovery.generation += 1;
@@ -3060,6 +3154,9 @@ const MrtApp: React.FC = () => {
             await new Promise((resolve) => window.setTimeout(resolve, 100));
           }
           if (!(await ensureCmdWsReady(15000))) throw new Error('命令通道未恢复');
+          // Starting right after the old process exits makes the SDK fail to
+          // load (-1) and retry for ~10 s; give the device time to release.
+          await new Promise((resolve) => window.setTimeout(resolve, A8_RECOVERY_RESTART_DELAY_MS));
           // Bring the device back even if the user cancelled meanwhile, since
           // the UI still shows it as on.
           const startResult = await startCameraMod({
@@ -3073,7 +3170,12 @@ const MrtApp: React.FC = () => {
             timeoutMs: 12000,
           });
           if (!startResult.ok) throw new Error(startResult.error || '启动设备失败');
-          if (!calibrationStillWanted()) return;
+          recovery.restarted = true;
+          if (!calibrationStillWanted()) {
+            // Cancelled while the device restarted: go back to the previous calibration.
+            restoreTrackingAfterA8Restart('cancelled-during-restart');
+            return;
+          }
           activeTrackingCoeRef.current = null;
           calibStateRef.current.skipNextInterval = true;
           if (!sendCmd('start_calibration', { points, validation: false })) {
@@ -3092,12 +3194,42 @@ const MrtApp: React.FC = () => {
           });
           if (recovery.generation === generation) {
             handleCancelCalibration();
-            showNotice(isEn ? `Calibration failed: ${message}` : `校准失败：${message}`);
+            showNotice(isEn
+              ? 'Calibration not completed: the device could not reconnect.\nTurn the device off and on again, then calibrate.'
+              : '校准未完成：设备重新连接失败。\n请关闭设备后重新打开，再进行校准。');
           }
         } finally {
           recovery.running = false;
         }
       })();
+      return true;
+    };
+    onPointErrorRef.current = (pointIndex: number, error: number, cause: PointFailureCause = 'error') => {
+      if (calibrationStateLiveRef.current !== 'calibrating') return;
+      if (a8StallRecoveryRef.current.running) return;
+      // Re-sending the same point is accepted by the A8 SDK but never sampled
+      // (11-17 device test), so a failed point restarts the SDK in a fresh
+      // process and calibration starts again from the centre (A8 only, at most
+      // A8_STALL_RECOVERY_MAX times per calibration).
+      if (onPointStallRef.current?.(pointIndex)) {
+        void ipcClient.videoDebugLog({
+          event: 'calibration:point-error-restart',
+          details: { pointIndex, error, cause },
+        });
+        return;
+      }
+      // Other devices and test runs keep waiting for the point result after a stall.
+      if (cause === 'stall' && (activeDeviceModel !== 'A8' || isCalibrationTestMode || simulateMode)) return;
+      // Restarts used up: end now instead of waiting several seconds and then
+      // skipping the point, which only leads to a rejected 0/0 result.
+      void ipcClient.videoDebugLog({
+        event: 'calibration:point-error-failed',
+        details: { pointIndex, error, cause },
+      });
+      handleCancelCalibration();
+      showNotice(isEn
+        ? `Calibration not completed: point ${pointIndex} failed several times.\nAsk the participant to sit upright with both eyes in view and not blink while looking at the dot, then calibrate again.`
+        : `校准未完成：第 ${pointIndex} 个点多次采集失败。\n请让受试者坐正、双眼都在画面中、注视圆点时不要眨眼，然后重新校准。`);
     };
   }, [
     activeDeviceModel,
@@ -3109,6 +3241,7 @@ const MrtApp: React.FC = () => {
     recordingSettings.sdkResolution,
     sendCmd,
     handleCancelCalibration,
+    restoreTrackingAfterA8Restart,
     showNotice,
     isEn,
   ]);
@@ -3697,6 +3830,19 @@ const MrtApp: React.FC = () => {
       }
 
       recordingLifecycle.acceptStop(operationId);
+      // Huahong/Pupil save from their own files, so the device is released right
+      // away instead of after saving; the service keeps finalizing on its own.
+      if (!simulateMode && stopCommandConfirmed && ['PupilCore', 'HH_ET10C', 'HH_ET28'].includes(activeDeviceModel)) {
+        deviceConnectionRequestedRef.current = false;
+        void stopDeviceCommand({ wsCmdRef, timeoutMs: 5000 }).then((rsp) => {
+          if (rsp.ok) {
+            setIsCameraOn(false);
+          } else {
+            // The finalization handler stops it again once saving is done.
+            console.warn('[MrtApp] device stop right after recording failed:', rsp.error || 'unknown');
+          }
+        });
+      }
       // Both recorders are allowed to finalize in parallel, but the recording
       // lifecycle does not finish until the facial artifact is settled.
       const facialStopResult = await facialStopPromise;
@@ -3739,7 +3885,7 @@ const MrtApp: React.FC = () => {
     })().finally(() => {
       stopRecordingInFlightRef.current = false;
     });
-  }, [isRecording, isRecordingFinalizing, isEn, scheduleRefreshRecordsAfterStop, showNotice, simulateMode, activeDeviceType, wsCmdRef, wsImageRef, imageCanvasRef, closeEncodedVideoPreview, stopFacialAutoCapture, stopFacialPreview, sendCmdThroughTransientSocket, hiddenRecordingMonitorTileIds, hasEyeTrackingModality, recordingLifecycle.state.operationId, recordingLifecycle.requestStop, recordingLifecycle.acceptStop, recordingLifecycle.finalize, recordingLifecycle.failFinalize]);
+  }, [isRecording, isRecordingFinalizing, isEn, scheduleRefreshRecordsAfterStop, showNotice, simulateMode, activeDeviceType, activeDeviceModel, wsCmdRef, wsImageRef, imageCanvasRef, closeEncodedVideoPreview, stopFacialAutoCapture, stopFacialPreview, sendCmdThroughTransientSocket, hiddenRecordingMonitorTileIds, hasEyeTrackingModality, recordingLifecycle.state.operationId, recordingLifecycle.requestStop, recordingLifecycle.acceptStop, recordingLifecycle.finalize, recordingLifecycle.failFinalize]);
 
   useEffect(() => {
     if (!recordingFinalizationResult || recordingFinalizationHandlingRef.current) return;
@@ -5018,6 +5164,102 @@ const MrtApp: React.FC = () => {
 
   const [isDeviceToggling, setIsDeviceToggling] = useState(false);
 
+  // ET28 glasses are switched on with their own power button. On the recording page
+  // "启动设备" stays disabled until the service confirms all three ET28 cameras are
+  // listed by Windows (it reads the device list only, never the vendor SDK).
+  // No polling: the state is checked when the page/device state changes and again
+  // whenever the system reports a camera being connected or removed.
+  // Other devices start as soon as they are plugged in and are not gated.
+  const isRecordingPage = currentView === 'detail' && activeTab === 'video';
+  const et28GateActive = activeDeviceModel === 'HH_ET28' && !simulateMode
+    && hasEyeTrackingModality && !hiddenRecordingMonitorTileIds.includes('device');
+  const [et28Presence, setEt28Presence] = useState<{ connected: boolean; missing: string[] } | null>(null);
+  // Through a ref: ensureCmdWsReady changes identity with calibration callbacks, and
+  // re-running the effect on each change would turn into polling.
+  const ensureCmdWsReadyRef = useRef(ensureCmdWsReady);
+  ensureCmdWsReadyRef.current = ensureCmdWsReady;
+  useEffect(() => {
+    // Not gated, or the device is running/starting: nothing to check. Leaving the
+    // page or a start attempt resets to "checking", so coming back asks again.
+    if (!et28GateActive || !isRecordingPage || isCameraOn || isDeviceToggling) {
+      setEt28Presence(null);
+      return;
+    }
+    let cancelled = false;
+    let inFlight = false;
+    let queryAgain = false;
+    let retryTimer: number | null = null;
+    const timers = new Set<number>();
+    const later = (ms: number, fn: () => void): void => {
+      const id = window.setTimeout(() => { timers.delete(id); fn(); }, ms);
+      timers.add(id);
+    };
+    const query = async (): Promise<void> => {
+      if (cancelled) return;
+      if (inFlight) { queryAgain = true; return; }
+      inFlight = true;
+      let answered = false;
+      try {
+        // A just-started service has no command channel yet; open it first.
+        if (await ensureCmdWsReadyRef.current(1500) && !cancelled) {
+          const rsp = await sendCmdWithResponse({ wsCmdRef, id: 'get_device_presence', args: {}, timeoutMs: 1500 });
+          const data = rsp.response as { connected?: unknown; missing?: unknown } | undefined;
+          // Only the Huahong service answers this. During a device switch the old
+          // backend (Pupil/Pro) may still reply with an error: that is "not yet
+          // answered", so keep retrying until the Huahong service is up.
+          if (!cancelled && rsp.ok && data && typeof data.connected === 'boolean') {
+            answered = true;
+            const connected = data.connected;
+            const missing = Array.isArray(data.missing) ? data.missing.filter((m): m is string => typeof m === 'string') : [];
+            setEt28Presence((prev) => (prev && prev.connected === connected && prev.missing.join() === missing.join()
+              ? prev : { connected, missing }));
+            void ipcClient.videoDebugLog({ event: 'et28:presence', details: { connected, missing } });
+          } else if (!cancelled) {
+            void ipcClient.videoDebugLog({ event: 'et28:presence-unanswered', details: { error: rsp.error || null } });
+          }
+        }
+      } catch {
+      }
+      inFlight = false;
+      if (cancelled) return;
+      if (!answered) {
+        // The service is not reachable yet (starting/restarting). Retry only until
+        // it answers once; this is not device polling.
+        if (retryTimer === null) {
+          retryTimer = window.setTimeout(() => { retryTimer = null; void query(); }, 1000);
+        }
+      } else if (queryAgain) {
+        queryAgain = false;
+        void query();
+      }
+    };
+    // Windows may list a camera slightly after the change notification, so look
+    // again a few times over the next seconds after each notification.
+    const onDeviceChange = (): void => {
+      void ipcClient.videoDebugLog({ event: 'et28:devicechange', details: {} });
+      for (const ms of [0, 500, 1500, 3000]) later(ms, () => { void query(); });
+    };
+    const mediaDevices = typeof navigator !== 'undefined' ? navigator.mediaDevices : undefined;
+    mediaDevices?.addEventListener('devicechange', onDeviceChange);
+    void query();
+    return () => {
+      cancelled = true;
+      mediaDevices?.removeEventListener('devicechange', onDeviceChange);
+      timers.forEach((id) => window.clearTimeout(id));
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
+    };
+  }, [et28GateActive, isRecordingPage, isCameraOn, isDeviceToggling, wsCmdRef]);
+  const et28CameraNameEn: Record<string, string> = { 场景: 'scene', 左眼: 'left eye', 右眼: 'right eye' };
+  const et28StartBlockedReason = !et28GateActive || isCameraOn
+    ? undefined
+    : et28Presence === null
+      ? (isEn ? 'Checking the ET28 glasses…' : '正在检查华弘眼镜…')
+      : et28Presence.connected
+        ? undefined
+        : et28Presence.missing.length > 0 && et28Presence.missing.length < 3
+          ? (isEn ? `ET28 cameras not found: ${et28Presence.missing.map((name) => et28CameraNameEn[name] || name).join(', ')}` : `华弘眼镜未找到${et28Presence.missing.join('、')}摄像头`)
+          : (isEn ? 'Press the power button on the ET28 glasses to switch them on' : '请先按下华弘眼镜的电源键打开设备');
+
   const resolveConfiguredFacialCamera = useCallback((cameras: FacialCamera[]): FacialCamera | null => {
     const selected = cameras.find((item) => item.id === facialCameraId);
     if (selected) return selected;
@@ -5132,8 +5374,9 @@ const MrtApp: React.FC = () => {
         }
       }
 
+      const integratedModel = ['PupilCore', 'HH_ET10C', 'HH_ET28'].includes(activeDeviceModel);
       let calibrationCoeForStart = calibrationCoe;
-      if (!isCameraOn && activeDeviceType === '眼镜式' && !String(calibrationCoeForStart || '').trim()) {
+      if (!isCameraOn && (activeDeviceType === '眼镜式' || integratedModel) && !String(calibrationCoeForStart || '').trim()) {
         const savedCalibration = await loadSavedCalibrationForCurrentSubject();
         if (savedCalibration.coe) {
           calibrationCoeForStart = savedCalibration.coe;
@@ -5203,10 +5446,22 @@ const MrtApp: React.FC = () => {
         return;
       }
       rollbackPrestartedFacial = false;
-      if (['PupilCore', 'HH_ET10C', 'HH_ET28'].includes(activeDeviceModel)) {
+      if (integratedModel && !isCameraOn) {
+        // Huahong/Pupil reuse this subject's saved calibration for this device.
+        // A rejected one (other device configuration, scene camera) is dropped
+        // so the subject is calibrated again rather than recorded with it.
+        const reusedCoe = typeof calibrationCoeForStart === 'string' ? calibrationCoeForStart.trim() : '';
+        setCalibrationState('none');
+        if (reusedCoe && !result.trackingError) {
+          activeTrackingCoeRef.current = reusedCoe;
+          calibrationDeviceModelRef.current = activeDeviceModel;
+        } else {
+          activeTrackingCoeRef.current = null;
+          setCalibrationCoe(null);
+          setCalibrationScores(null);
+        }
+      } else if (integratedModel) {
         activeTrackingCoeRef.current = null;
-        setCalibrationCoe(null);
-        setCalibrationScores(null);
         setCalibrationState('none');
       } else if (!isCameraOn && !result.trackingError) {
         const activatedCoe = typeof calibrationCoeForStart === 'string' ? calibrationCoeForStart.trim() : '';
@@ -5215,7 +5470,9 @@ const MrtApp: React.FC = () => {
         }
       }
       if (result.trackingError) {
-        showNotice(`设备已启动，但恢复上次校准结果失败：${result.trackingError}`);
+        showNotice(integratedModel
+          ? `设备已启动，但无法沿用上次的校准，请重新校准：${result.trackingError}`
+          : `设备已启动，但恢复上次校准结果失败：${result.trackingError}`);
       }
 
       // Re-evaluate the glasses preview after startup. Combined mode keeps the
@@ -7404,6 +7661,9 @@ const MrtApp: React.FC = () => {
           toggleCamera={toggleCamera}
           isDeviceToggling={isDeviceToggling}
           isDeviceStopping={isDeviceStopPending && !isCameraOn}
+          deviceStartBlockedReason={!isCameraOn && isRecordingFinalizing
+            ? (isEn ? 'Saving the recording; the device can be started when it is done' : '正在保存录制，保存完成后才能启动设备')
+            : et28StartBlockedReason}
           handleStartRecording={handleStartRecording}
           handleStopRecording={handleStopRecording}
           isRecording={isRecording}

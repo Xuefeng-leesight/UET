@@ -22,8 +22,6 @@
     "build:py-server:win": "py -3 -m PyInstaller --clean --noconfirm --distpath services/dist --workpath services/build/eye-tracking services/eye_tracking/packaging/mrt-ws-server.spec && py -3 -m PyInstaller --clean --noconfirm --distpath services/dist --workpath services/build/facial-analysis services/facial_analysis/packaging/facial-ws-server.spec && npm run build:pupil-server && npm run build:huahong-server",
     "dist:win": "npm run build && npm run build:py-server:win && electron-builder --win nsis",
     "docs:codegraph": "node scripts/generate-code-graph.mjs",
-    "codegraph:serve": "codegraph serve -c docs/code-graph/typescript.config.json --no-open",
-    "codegraph:serve:python": "codegraph serve -c docs/code-graph/python.config.json --port 8081 --no-open",
     "build:huahong-server": "node scripts/build-huahong-server.mjs",
     "setup:huahong": "py -3 -m venv services/eye_tracking/adapters/huahong/.venv && services/eye_tracking/adapters/huahong/.venv/Scripts/python.exe -m pip install -r services/eye_tracking/adapters/huahong/requirements.txt",
     "check:huahong-sdk": "node scripts/validate-huahong-sdk.mjs",
@@ -129,8 +127,8 @@
         ]
       },
       {
-        "from": "SDK/huahong/et28/bin/windows/x64",
-        "to": "SDK/huahong/et28/bin/windows/x64",
+        "from": "SDK/huahong/et28-aiot/bin/windows/x64",
+        "to": "SDK/huahong/et28-aiot/bin/windows/x64",
         "filter": [
           "*.dll"
         ]

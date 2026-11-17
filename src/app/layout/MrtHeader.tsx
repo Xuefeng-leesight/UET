@@ -37,6 +37,8 @@ interface MrtHeaderProps {
   isDeviceToggling?: boolean;
   /** A device stop is still finishing in the background; starting waits for it. */
   isDeviceStopping?: boolean;
+  /** When set, the device cannot be started yet (e.g. ET28 glasses still off); shown as the tooltip. */
+  deviceStartBlockedReason?: string;
   handleStartRecording: () => void;
   handleStopRecording?: () => void;
   isRecording: boolean;
@@ -92,6 +94,7 @@ const MrtHeader: React.FC<MrtHeaderProps> = ({
   toggleCamera,
   isDeviceToggling = false,
   isDeviceStopping = false,
+  deviceStartBlockedReason,
   handleStartRecording,
   handleStopRecording,
   isRecording,
@@ -169,7 +172,7 @@ const MrtHeader: React.FC<MrtHeaderProps> = ({
               value={dashboardSearchQuery}
               onChange={(e) => setDashboardSearchQuery(e.target.value)}
               placeholder="搜索..."
-              className="pl-9 pr-4 py-2 bg-[var(--app-control)] text-slate-700 rounded-lg text-xs w-52 focus:ring-2 focus:ring-sky-500/10 outline-none transition-colors"
+              className="pl-9 pr-4 py-2 bg-[var(--app-control)] text-slate-700 rounded-full [--app-control-radius:9999px] text-xs w-52 focus:ring-2 focus:ring-sky-500/10 outline-none transition-colors"
             />
           </div>
           <button onClick={handleSetupProjectLibrary} className={btnSecondary}>
@@ -229,7 +232,8 @@ const MrtHeader: React.FC<MrtHeaderProps> = ({
           <div className="flex gap-2 items-center">
             <button
               onClick={toggleCamera}
-              disabled={isDeviceToggling || isDeviceStopping}
+              disabled={isDeviceToggling || isDeviceStopping || (!isCameraOn && Boolean(deviceStartBlockedReason))}
+              title={!isCameraOn && !isDeviceToggling ? deviceStartBlockedReason : undefined}
               className={isCameraOn ? btnSecondary : btnPrimary}
             >
               {/* All four labels share one grid cell, so the button keeps the width of

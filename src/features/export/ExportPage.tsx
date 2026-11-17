@@ -51,6 +51,13 @@ const capitalizeEnglishHeader = (value: string): string =>
     .toLowerCase()
     .replace(/[a-z]/, (letter) => letter.toUpperCase());
 
+/**
+ * A Pupil/Huahong file in the 7invensun layout holds top-left 0–1 gaze, while a
+ * 7invensun 眼镜式 file is scene-centred; AOI export must not guess the latter.
+ */
+const exportGazeFrame = (record: RecordingRecord): 'top-left-normalized' | undefined =>
+  record.exportCsvPath ? 'top-left-normalized' : undefined;
+
 const EXPORT_CATEGORY_DEFS: ExportCategoryDef[] = [
   {
     key: 'basic',
@@ -659,9 +666,10 @@ const ExportPage: React.FC<ExportPageProps> = ({ records, subjects, subjectField
       .map((r) => ({
         id: r.id,
         name: resolveRecordExportName(r),
-        csvPath: r.csvPath as string,
+        csvPath: (r.exportCsvPath || r.csvPath) as string,
         projectDir: projectDir || undefined,
         deviceType: r.deviceType,
+        gazeFrame: exportGazeFrame(r),
         subjectName: typeof r.subjectName === 'string' ? r.subjectName : '',
         subjectInfo: buildSubjectInfoForRecord(r),
         metadataValues: buildRecordMetadataValues(r),
@@ -785,10 +793,11 @@ const ExportPage: React.FC<ExportPageProps> = ({ records, subjects, subjectField
     setPreviewLoading(true);
     setPreviewData([]);
     try {
-      const res = await ipcClient.previewRecordCsv({ csvPath: record.csvPath, maxRows: 100,
+      const res = await ipcClient.previewRecordCsv({ csvPath: record.exportCsvPath || record.csvPath, maxRows: 100,
         aoiContext: projectDir && availableColumns.some((key) => key.startsWith('aoi_') && selectedColumns.has(key))
           ? { projectDir, recordId: record.id, deviceType: record.deviceType,
-            videoWidth: record.videoWidth, videoHeight: record.videoHeight, coordinateSpace: 'original-video' }
+            videoWidth: record.videoWidth, videoHeight: record.videoHeight, coordinateSpace: 'original-video',
+            gazeFrame: exportGazeFrame(record) }
           : undefined });
       if (!isCurrent()) return;
       if (res.ok) {

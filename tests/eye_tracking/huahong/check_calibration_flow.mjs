@@ -65,7 +65,7 @@ function harness(model) {
   const wsCmdRef = { current: null };
   const ref = { current: { arrIndex: 4, pointIndex: 1, points: 3, pointAttempt: 0,
     pointPending: false, timerId: null, safetyTimerId: null } };
-  const result = { state: 'none', coefficient: null, activeCoefficient: null, finishedPoints: 0, pointFailure: null, scores: null };
+  const result = { state: 'none', coefficient: null, activeCoefficient: null, finishedPoints: 0, pointFailure: null, scores: null, et28Result: null };
   const send = (id, args = {}) => socketModule.sendCmdOverWs({ wsCmdRef, id, args });
   const sendAsync = (id, args = {}, timeoutMs = 17) => socketModule.sendCmdWithResponse({ wsCmdRef, id, args, timeoutMs });
   const controller = flow.createCalibrationController({
@@ -79,6 +79,7 @@ function harness(model) {
     setCalibrationCoe(value) { result.coefficient = value; },
     setCalibrationScores(value) { result.scores = typeof value === 'function' ? value(result.scores) : value; },
     onTrackingCoeActivated(value) { result.activeCoefficient = value || null; },
+    onEt28CalibrationResult(quality) { result.et28Result = quality; },
     onCalibrationPointFinished() { result.finishedPoints++; },
     onCalibrationPointProgress(value) { result.pointFailure = value.error; }, ...controller,
   });
@@ -317,6 +318,7 @@ for (const nativeError of [-8, -1]) {
     points: values.map((score, index) => ({ index: index + 1, status: 0, score, bias: [0, 0] })) });
   const quality = { version: 1, provider: 'HH_ET28', aggregation: 'arithmetic_mean',
     left: eye([100, 97, 101]), right: eye([101, 101, 101]) };
+  quality.left.points[0].status = 2;
   const completion = { coe: 'verified-score-round', tracking_error: 0, calibration_quality: quality };
   const old = h.start().session;
   h.respond('start_calibration');
@@ -335,6 +337,9 @@ for (const nativeError of [-8, -1]) {
   assert.equal(h.result.scores.left, 298 / 3);
   assert.equal(h.result.scores.right, 101);
   assert.equal(h.result.scores.et28Quality.left.points[2].score, 101);
+  assert.equal(h.result.state, 'finished');
+  assert.equal(h.result.activeCoefficient, 'verified-score-round');
+  assert.equal(h.result.et28Result.left.points[0].status, 2);
   h.close();
   assert.equal(h.result.scores, null, 'Disconnect clears the live score snapshot');
   h.respond('complete_calibration', completion, fresh);

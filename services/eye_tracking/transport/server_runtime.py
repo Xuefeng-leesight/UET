@@ -13,6 +13,23 @@ service = SDKService()
 recording = RecordingCoordinator(service)
 
 
+# 7invensun desktop scores outside this range mean an eye did not calibrate
+# (same range as CALIBRATION_SCORE_MIN/MAX in recordingWsModule.ts).
+DESKTOP_CALIBRATION_SCORE_MIN = 50.0
+DESKTOP_CALIBRATION_SCORE_MAX = 100.0
+
+
+def _desktop_calibration_scores_usable(left, right):
+    for raw in (left, right):
+        try:
+            score = float(raw)
+        except (TypeError, ValueError):
+            return False
+        if not (DESKTOP_CALIBRATION_SCORE_MIN <= score <= DESKTOP_CALIBRATION_SCORE_MAX):
+            return False
+    return True
+
+
 def _to_int(value, default=0):
     try:
         return int(value)
@@ -541,6 +558,7 @@ async def handler_cmd(websocket):
                     await websocket.send(msg)
                     continue
                 success, coe_str, left, right = await run_sdk(service.complete_calibration)
+                score_rejected = False
                 compute_left, compute_right = getattr(service.driver, "last_calibration_compute_results", (success, None))
                 complete_sdk_error = getattr(service.driver, "last_calibration_complete_result", None)
                 score_error = getattr(service.driver, "last_calibration_score_result", None)
@@ -565,6 +583,13 @@ async def handler_cmd(websocket):
                         # Calibration stopped tracking at its start; resume the
                         # previous coefficient when no new one is applied.
                         await run_sdk(service.restore_last_good_tracking, "calibration failed")
+                    elif not _desktop_calibration_scores_usable(left, right):
+                        # The SDK reports success with score 0 when a point was
+                        # not sampled. Applying that coefficient would also make
+                        # it the "last good" one, so keep the previous instead.
+                        score_rejected = True
+                        log("complete_calibration: score rejected", "left", left, "right", right)
+                        await run_sdk(service.restore_last_good_tracking, "calibration score out of range")
                 tracking_error = 0
                 tracking_msg = "ok"
                 if err == 0 and service._is_glasses_mode():
@@ -574,7 +599,7 @@ async def handler_cmd(websocket):
                         tracking_msg = "左右眼校准数据应用失败"
                     else:
                         service.tracking_active = True
-                elif err == 0 and coe_str:
+                elif err == 0 and coe_str and not score_rejected:
                     try:
                         log("complete_calibration: start_tracking", "device_type", service.device_type, "coe_len", len(coe_str))
                         tracking_ret = await run_sdk(service.start_tracking, coe_str)
@@ -609,6 +634,8 @@ async def handler_cmd(websocket):
                     "compute_right_error": compute_right,
                     "complete_sdk_error": complete_sdk_error,
                     "score_error": score_error,
+                    "score_rejected": score_rejected,
+                    "previous_calibration_active": bool(score_rejected and service.tracking_active),
                 }
                 msg = json.dumps(rsp)
                 log("rsp", msg)

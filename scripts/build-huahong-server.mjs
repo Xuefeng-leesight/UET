@@ -22,6 +22,7 @@ function run(command, args) {
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${command} exited with ${result.status}`);
 }
+run(process.execPath, ['scripts/validate-huahong-sdk.mjs']);
 run(probe, ['-version']);
 run(python, ['-c', 'import numpy, cv2, mss, msgpack, PIL.Image, websockets.asyncio.server, PyInstaller; cv2.SIFT_create()']);
 run(python, ['-m', 'PyInstaller', '--clean', '--noconfirm', '--distpath', 'services/dist',

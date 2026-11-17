@@ -54,7 +54,7 @@ class EventTests(unittest.TestCase):
             self.assertEqual(result["gazeRows"], 3)
             self.assertEqual(result['pupilDataSchemaVersion'], 4)
             self.assertEqual(result['measurementAvailability']['imu'], 'not_supported_by_pupil_core')
-            with recorder.csv_path.open(newline="") as handle:
+            with recorder.internal_csv_path.open(newline="") as handle:
                 rows = list(csv.DictReader(handle))
             gaze_rows = [r for r in rows if r["pupil_valid"]]
             self.assertEqual(gaze_rows[1]["blink"], "1")

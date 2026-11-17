@@ -142,7 +142,11 @@ try {
   delayed.openDone(); assert.equal((await configuring).ok, false); assert.equal((await delayedStop).stopped, true);
   assert.equal(delayed.isOpen, false); assert.equal(rows(delayedCtx).length, 0);
   // A receiver bind failure is visible and leaves an error status for recovery.
-  const occupied = dgram.createSocket('udp4'); const occupiedPort = await bind(occupied); const bindCtx = context();
+  // Occupy the same wildcard address the service binds: Windows lets 0.0.0.0 share a
+  // port already held only on 127.0.0.1, so a loopback-only holder would not conflict there.
+  const occupied = dgram.createSocket('udp4');
+  await new Promise((resolve, reject) => { occupied.once('error', reject); occupied.bind(0, '0.0.0.0', resolve); });
+  const occupiedPort = occupied.address().port; const bindCtx = context();
   const bindService = new RecordingCommunicationService();
   assert.equal((await bindService.configure({ context: bindCtx, config: config({ enabled: true, udpReceivePort: occupiedPort }) })).ok, false);
   assert.equal(status(bindCtx).status, 'error'); assert.equal((await bindService.flushStop({ context: bindCtx })).stopped, true);
@@ -202,4 +206,9 @@ try {
   assert.equal(diskResult.events.length, 0); assert.ok(diskResult.errors.some(message => message.includes('disk full')));
   assert.equal(statuses.at(-1)[0], 'error');
   console.log('recording communication: UDP loopback, serial mock, durable journal, ACK fencing, shutdown, errors and payload checks passed');
-} finally { fs.rmSync(root, { recursive: true, force: true }); }
+} finally {
+  // The handlers close their CSV read streams asynchronously. Windows cannot remove a
+  // file that is still open, so give those closes one turn of the event loop first.
+  await new Promise(resolve => setTimeout(resolve, 100));
+  fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+}

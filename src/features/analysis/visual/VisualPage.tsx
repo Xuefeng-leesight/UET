@@ -53,6 +53,36 @@ function getMountainBgColor(theme: string): string {
   return theme === 'dark' ? THEME_PREVIEWS.dark.bg : THEME_PREVIEWS['modern-light'].bg;
 }
 
+const upperBoundByTimestamp = (points: HeatmapPoint[], timeMs: number) => {
+  let lo = 0;
+  let hi = points.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    const ts = points[mid]?.timestamp ?? 0;
+    if (ts <= timeMs) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  return lo;
+};
+
+const lowerBoundByTimestamp = (points: HeatmapPoint[], timeMs: number) => {
+  let lo = 0;
+  let hi = points.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    const ts = points[mid]?.timestamp ?? 0;
+    if (ts < timeMs) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  return lo;
+};
+
 interface VisualPageProps {
   stimuli: ExtendedStimulus[];
   visualSelectedStimulusId: string | null;
@@ -741,35 +771,12 @@ const VisualPage: React.FC<VisualPageProps> = ({
     frameStep,
   ]);
 
-  const upperBoundByTimestamp = (points: HeatmapPoint[], timeMs: number) => {
-    let lo = 0;
-    let hi = points.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >>> 1;
-      const ts = points[mid]?.timestamp ?? 0;
-      if (ts <= timeMs) {
-        lo = mid + 1;
-      } else {
-        hi = mid;
-      }
-    }
-    return lo;
-  };
-
-  const lowerBoundByTimestamp = (points: HeatmapPoint[], timeMs: number) => {
-    let lo = 0;
-    let hi = points.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >>> 1;
-      const ts = points[mid]?.timestamp ?? 0;
-      if (ts < timeMs) {
-        lo = mid + 1;
-      } else {
-        hi = mid;
-      }
-    }
-    return lo;
-  };
+  const mountainPoints = React.useMemo(() => {
+    if (visualSubTab !== 'mountain' || !stimulusTimeRange) return selectedRecordPointsFiltered;
+    const start = lowerBoundByTimestamp(selectedRecordPointsFiltered, stimulusTimeRange.startTime * 1000);
+    const end = upperBoundByTimestamp(selectedRecordPointsFiltered, stimulusTimeRange.endTime * 1000);
+    return selectedRecordPointsFiltered.slice(start, end);
+  }, [selectedRecordPointsFiltered, stimulusTimeRange, visualSubTab]);
 
   type ContainLayout = {
     containerW: number;
@@ -2596,7 +2603,7 @@ const VisualPage: React.FC<VisualPageProps> = ({
                         videoElement={videoRef.current}
                         imageUrl={mappingImageUrl}
                         videoSize={activeFrameSize.w > 0 ? activeFrameSize : null}
-                        points={selectedRecordPointsAligned}
+                        points={mountainPoints}
                         currentTime={visualCurrentTime * 1000}
                         settings={mountainSettings}
                         backgroundColor={mountainBgColor}

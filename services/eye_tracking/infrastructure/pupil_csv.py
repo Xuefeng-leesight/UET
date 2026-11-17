@@ -57,6 +57,10 @@ CSV_FIELDS += ('udp_send', 'udp_receive', 'trigger_send', 'trigger_receive',
                'communication_recording_id', 'communication_channel', 'communication_text_encoding')
 # Internal continuity evidence, not additional user-selectable export columns.
 CSV_FIELDS += ('world_image_width', 'world_image_height', 'world_resolution_epoch')
+CSV_FIELDS += tuple(f'{eye}_{key}' for eye in ('left', 'right') for key in (
+    'pupil_bit_mask', 'openness', 'et28_device_timestamp', 'et28_pupil_3d',
+    'et28_eyelid_contour', 'et28_blink_event'))
+CSV_FIELDS += ('et28_merged_gaze', 'et28_gaze_events')
 
 
 def vector_columns(row, prefix, value):

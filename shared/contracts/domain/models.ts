@@ -152,6 +152,11 @@ export interface RecordingRecord {
   mp4Path?: string;
   mp4Url?: string;
   csvPath?: string;
+  /**
+   * Pupil/Huahong recordings in the 7invensun layout: the user-facing <name>.csv.
+   * Export reads it; csvPath then points at the recorder's internal CSV for playback.
+   */
+  exportCsvPath?: string;
   markers?: Array<{
     type: 'custom' | 'trigger';
     name?: string;

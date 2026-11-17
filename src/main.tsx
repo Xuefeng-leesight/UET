@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from '@/App';
 import { applyTheme, DEFAULT_THEME, getStoredTheme, migrateLegacyTheme } from '@/app/theme/theme';
-import { installGlassHoverLens } from '@/app/theme/glassHoverLens';
 import { initRendererPerformanceLogging, markRendererPerfCheckpoint } from '@/infrastructure/logging';
 import { ENABLE_DEBUG_TESTING } from '@/app/config';
 
@@ -26,7 +25,6 @@ markRendererPerfCheckpoint('renderer-theme-apply-start');
 // the default appearance. Keep this renderer-only; no new platform IPC is needed.
 document.documentElement.dataset.platform = /\bWindows NT\b/.test(navigator.userAgent) ? 'windows' : 'other';
 applyTheme(getStoredTheme() || DEFAULT_THEME);
-installGlassHoverLens();
 markRendererPerfCheckpoint('renderer-theme-apply-finished');
 
 const rootElement = document.getElementById('root');

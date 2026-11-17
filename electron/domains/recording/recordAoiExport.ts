@@ -19,7 +19,8 @@ export function normalizeAoiExportContext(value: unknown): AoiExportContext | un
     deviceType: typeof source.deviceType === 'string' ? source.deviceType : undefined,
     videoWidth: positive(source.videoWidth) ? source.videoWidth : undefined,
     videoHeight: positive(source.videoHeight) ? source.videoHeight : undefined,
-    coordinateSpace: source.coordinateSpace === 'original-video' ? 'original-video' : 'mapping' }
+    coordinateSpace: source.coordinateSpace === 'original-video' ? 'original-video' : 'mapping',
+    ...(source.gazeFrame === 'top-left-normalized' ? { gazeFrame: 'top-left-normalized' as const } : {}) }
 }
 
 async function readSource(csvPath: string): Promise<{ headers: string[]; model: string }> {
@@ -82,7 +83,8 @@ export async function createRecordAoiExportDeriver(csvPath: string, input: unkno
   const headers = new Map(source.headers.map((header, index) => [header.toLowerCase(), index]))
   const read = makeExportRowReader(headers)
   const hasVideoTime = headers.has('video_time_ms')
-  const isGlassesMode = context.deviceType === '眼镜式' || source.model === 'PupilCore'
+  const isGlassesMode = context.gazeFrame !== 'top-left-normalized'
+    && (context.deviceType === '眼镜式' || source.model === 'PupilCore')
   const dimensionsKnown = positive(context.videoWidth) && positive(context.videoHeight)
   let fixations: AoiExportFixation[] = []
   let fixationsAvailable = false

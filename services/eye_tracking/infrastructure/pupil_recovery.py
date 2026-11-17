@@ -11,12 +11,16 @@ import json
 import math
 import os
 from pathlib import Path
+import shutil
 import subprocess
 
 from .pupil_csv import CSV_FIELDS
+from .et28_csv_events import append_et28_events
 from .pupil_events import append_events, order_csv
 from .pupil_metrics import journal_metrics
 from .recording_communication import append_communications
+from .recording_workspace import remove_sidecar, sweep_stale, workspace_for
+from .seven_invensun_layout import internal_csv_path, write_seven_invensun_csv
 
 
 class RecordingLease:
@@ -117,9 +121,21 @@ def recover_directory(directory, *, ffmpeg="ffmpeg", ffprobe="ffprobe", source_m
     results = []
     if not directory.exists():
         return results
-    for sidecar in sorted(directory.glob("*.pupil")):
+    try:
+        sweep_stale()
+    except OSError:
+        pass
+    # Current recordings keep their working folder outside the project; older
+    # ones kept it next to the recording. Both can hold an interrupted session.
+    workspace = workspace_for(directory)
+    sidecars = sorted(directory.glob("*.pupil"))
+    if workspace.is_dir() and not workspace.is_symlink():
+        sidecars += sorted(workspace.glob("*.pupil"))
+    for sidecar in sidecars:
         if sidecar.is_symlink() or not sidecar.is_dir():
             continue
+        in_workspace = sidecar.parent == workspace
+        cleanup = False
         name = sidecar.name[:-6]
         # Local import avoids a recorder/recovery import cycle.
         from .pupil_recorder import validate_record_name
@@ -171,17 +187,31 @@ def recover_directory(directory, *, ffmpeg="ffmpeg", ffprobe="ffprobe", source_m
             with spool_path.open(encoding="utf-8") as spool, recovery_csv.open("w+", newline="", encoding="utf-8") as output:
                 counts = write_gaze_csv(spool, output, duration, context["stimuli"], context["markers"], source_model=source_model)
                 event_metadata = append_events(sidecar / "events-spool.jsonl", output, manifest["sourceTimeOriginS"], duration)
+                if source_model == 'HH_ET28':
+                    event_metadata.update(append_et28_events(spool, output, manifest["sourceTimeOriginS"], duration))
                 event_metadata.update(append_communications(sidecar / 'communication-events.jsonl', output,
                     duration, name, manifest.get('connectionGeneration'), manifest['sourceTimeOriginS'], source_model))
                 order_csv(output, sidecar)
                 output.flush()
                 os.fsync(output.fileno())
+            # shutil.move: the working folder may be on another drive than the project.
             if not original_video.exists():
-                os.replace(video, original_video)
-            if csv_path.exists() and not original_csv.exists():
-                os.replace(csv_path, original_csv)
-            os.replace(recovery_video, video)
-            os.replace(recovery_csv, csv_path)
+                shutil.move(str(video), str(original_video))
+            if csv_path.exists():
+                if original_csv.exists():
+                    csv_path.unlink()  # A retry's earlier output; the original is kept.
+                else:
+                    shutil.move(str(csv_path), str(original_csv))
+            shutil.move(str(recovery_video), str(video))
+            internal = internal_csv_path(sidecar)
+            os.replace(recovery_csv, internal)
+            try:
+                event_metadata.update(write_seven_invensun_csv(
+                    csv_path, internal, width=manifest["encodedWidth"], height=manifest["encodedHeight"],
+                    started_wall_ms=manifest.get("recordingStartedAtMs")))
+            except Exception as exc:
+                # csv_path received the recovered recorder CSV; keep the recovery.
+                event_metadata["standardCsvError"] = str(exc)
             meta.update(status="partial", recoveredAfterInterruption=True, videoVerified=True,
                         error="Interrupted recording recovered; trailing video/samples may be missing",
                         durationSeconds=duration, outputFrames=frames, **counts, **event_metadata,
@@ -196,6 +226,7 @@ def recover_directory(directory, *, ffmpeg="ffmpeg", ffprobe="ffprobe", source_m
             atomic_json(meta_path, meta)
             atomic_json(sidecar / 'diagnostics.json', meta)
             results.append({"recording_id": name, "status": "partial"})
+            cleanup = in_workspace
         except Exception as exc:
             # Never silently treat a header-only CSV or unreadable MP4 as complete.
             meta.update(status="failed", videoVerified=False, recoveryError=str(exc))
@@ -206,4 +237,6 @@ def recover_directory(directory, *, ffmpeg="ffmpeg", ffprobe="ffprobe", source_m
             results.append({"recording_id": name, "status": "failed", "error": str(exc)})
         finally:
             lease.close()
+            if cleanup:
+                remove_sidecar(sidecar)
     return results

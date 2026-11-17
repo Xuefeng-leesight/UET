@@ -57,7 +57,7 @@ npm run build:pupil-server
 
 `services/dist/pupil-third-party/` 包含许可证、来源、实际依赖版本、MRT 后端对应源码/重建脚本及自动生成的 `pupil-backend-sha256.json` 文件/符号链接清单。必须在目标系统构建；macOS 的构建结果不能替代 Windows 安装包验收。对外分发前需核对所有内嵌库及其二进制依赖的许可证和对应源码交付，不能只凭包元数据判断。
 
-`pupil-native-v7-score` 在现有校准完成/测试完成提示中显示角度误差及自定义 1–10 分，保留像素数据。用户确认的公式为 `clamp(10−2×pupilCoreAccuracyDeg,1,10)`，保留一位小数，越高越好；不是厂商评分，不判定精度达标。训练和独立验证分开记录，官方公式对照同时记录 5° 排除阈值与样本数量，角度缺失或全部剔除时不给分。独立验证复用共享卡片测试，采样三个与训练不同的分散位置；结果随后续录制附档保存。计算口径、评分政策、配对差异及验收见[角度误差与独立验证](../../../../docs/debug/pupil-native-2026-10-16-angular-validation.md)。
+`pupil-native-v7-score` 在现有校准完成/测试完成提示中显示角度误差及自定义 1–10 分，保留像素数据。用户确认的公式为 `clamp(10−2×pupilCoreAccuracyDeg,1,10)`，保留一位小数，越高越好；不是厂商评分，不判定精度达标。训练和独立验证分开记录，官方公式对照同时记录 5° 排除阈值与样本数量，角度缺失或全部剔除时不给分。独立验证复用共享卡片测试，采样三个与训练不同的分散位置；结果随后续录制附档保存。计算口径、评分政策、配对差异及验收见角度误差与独立验证。
 
 在构建后首次运行任何冻结程序测试**之前**执行启动验收（Windows 替换解释器及可执行文件路径）：
 
@@ -67,12 +67,12 @@ services/eye_tracking/adapters/pupil_native/.venv/bin/python -m tools.pupil.benc
   --label first-after-build --budget 2 --output services/build/pupil-validation/startup-service-first.json
 ```
 
-计时覆盖进程创建、服务端口及全部算法依赖就绪，以 `algorithm_ready=true` 为终点；仅端口可连不算通过。失败、超过2秒或退出异常返回非零。重复测量必须用 `--label repeat`，`--mode worker` 仅供依赖诊断。CI 已加入 macOS/Windows 预算检查及报告归档；CI 构建机和本机都可能已有系统缓存，正式首次安装验收须使用干净目标系统，不能把重复结果称为冷启动。旧版本机重建后首次全流程为3.02秒，重复为0.55/0.54秒，详见[验证记录](../../../../docs/debug/pupil-native-2026-10-13-validation.md)。这不包含相机首帧或眼模型稳定时间。
+计时覆盖进程创建、服务端口及全部算法依赖就绪，以 `algorithm_ready=true` 为终点；仅端口可连不算通过。失败、超过2秒或退出异常返回非零。重复测量必须用 `--label repeat`，`--mode worker` 仅供依赖诊断。CI 已加入 macOS/Windows 预算检查及报告归档；CI 构建机和本机都可能已有系统缓存，正式首次安装验收须使用干净目标系统，不能把重复结果称为冷启动。旧版本机重建后首次全流程为3.02秒，重复为0.55/0.54秒，详见验证记录。这不包含相机首帧或眼模型稳定时间。
 
 冻结程序专项验证：将 `MRT_PUPIL_EXECUTABLE` 设为上述可执行文件的绝对路径，运行 `python -m unittest tests.eye_tracking.pupil_core.test_native_boundaries.NativeBoundaryTests.test_packaged_native_fit_without_python_environment tests.eye_tracking.pupil_core.test_native_export.NativeExportTests.test_packaged_native_status_missing_camera_and_shutdown tests.eye_tracking.pupil_core.test_runtime.ProductionRuntimeTests.test_production_entrypoint_parent_pipe_shutdown -v`。分别验证真实数值拟合、默认原生状态/缺相机拒绝、显式 Capture 诊断与父进程退出；不要求外部 Python 或 Capture 参与冻结程序执行。
 
 真机验收仍须在 Capture 关闭时完成：相机预览 → 共享校准 → 三点独立验证 → 录制 → 回放/分析/导出 → 取消与拔插重连 → 长时间采集。无硬件时的自动化不能证明精度、有效率、持续吞吐或 Windows 驱动兼容。
 
-Windows若长时间显示初始化、且停止后才出现NumPy加载完成日志，参见[Windows初始化排查](../../../../docs/debug/pupil-native-windows-2026-10-13-initialization.md)。父管道监测使用Windows原生读取，避免标准输入阻塞与DLL加载互锁。源码启动基准可传入专用Python路径并添加 `--source`；服务/worker两种模式都保持父管道打开直至算法就绪，复测以2秒预算验收。
+Windows若长时间显示初始化、且停止后才出现NumPy加载完成日志，参见Windows初始化排查。父管道监测使用Windows原生读取，避免标准输入阻塞与DLL加载互锁。源码启动基准可传入专用Python路径并添加 `--source`；服务/worker两种模式都保持父管道打开直至算法就绪，复测以2秒预算验收。
 
-当前 `pupil-native-v5-startup` 使用独立PKG归档与精简启动包，交付必须包含 `mrt-pupil-server.pkg`。最新首次启动测量仍有1.72–2.94秒波动，尚未稳定达到2秒；分段数据与Windows原始日志区分见[启动优化记录](../../../../docs/debug/pupil-native-2026-10-14-startup.md)。
+当前 `pupil-native-v5-startup` 使用独立PKG归档与精简启动包，交付必须包含 `mrt-pupil-server.pkg`。最新首次启动测量仍有1.72–2.94秒波动，尚未稳定达到2秒；分段数据与Windows原始日志区分见启动优化记录。

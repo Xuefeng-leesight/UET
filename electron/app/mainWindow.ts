@@ -47,8 +47,6 @@ const THEME_WINDOW_APPEARANCE: Record<AppThemeName, ThemeWindowAppearance> = {
 const SUPPORTS_TITLE_BAR_OVERLAY = process.platform === 'win32' || process.platform === 'linux'
 const TITLE_BAR_OVERLAY_HEIGHT = 36
 const MODAL_MASK_OPACITY = 0.4
-// The glass theme uses a lighter mask behind its frosted dialogs (glass-preview.css).
-const GLASS_MODAL_MASK_OPACITY = 0.12
 
 let currentMainTheme: AppThemeName = DEFAULT_APP_THEME
 let isMainWindowModalMaskActive = false
@@ -90,10 +88,7 @@ function getTitleBarOverlayStyle(appearance: ThemeWindowAppearance): {
 } {
   if (isMainWindowModalMaskActive) {
     return {
-      color: blendHexWithBlack(
-        appearance.titleBarColor,
-        currentMainTheme === 'glass' ? GLASS_MODAL_MASK_OPACITY : MODAL_MASK_OPACITY,
-      ),
+      color: blendHexWithBlack(appearance.titleBarColor, MODAL_MASK_OPACITY),
       height: TITLE_BAR_OVERLAY_HEIGHT,
     }
   }

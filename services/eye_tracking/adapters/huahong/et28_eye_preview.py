@@ -1,7 +1,6 @@
 """Bounded ET28 infrared preview, separate from lossless scene acquisition."""
 
 import ctypes as C
-from dataclasses import replace
 import logging
 import threading
 import time
@@ -15,8 +14,8 @@ class ET28EyePreview:
                 and width * height * 2 * 3 <= 32 * 1024 * 1024):
             raise ValueError('Invalid ET28 infrared frame dimensions')
         self.width, self.height, self.identity = width, height, identity
-        self._length = width * height * 2
-        self._latest = None
+        self._length = width * height
+        self._latest = {}
         self._next_delivery = 0.0
         self._active = True
         self._warned = False
@@ -24,9 +23,9 @@ class ET28EyePreview:
         self.last_frame = 0.0
         self._lock = threading.Lock()
 
-    def callback(self, _, pointer, length):
+    def accept(self, stream, pointer, length):
         # The SDK owns and reuses pointer memory as soon as this callback exits.
-        # Keep only the newest copied grayscale pair; never fill the recording
+        # Keep only the newest copied grayscale frame for each eye; never fill the recording
         # queue with preview frames or convert all native-rate frames to BGR.
         try:
             if not self._active:
@@ -38,11 +37,13 @@ class ET28EyePreview:
             # Do not nest the service's identity lock inside the preview lock.
             # Closing or reading optional eye preview must never wait for a
             # native callback's copy or for scene acquisition's queue lock.
-            latest = (self.identity('eye'), C.string_at(pointer, length))
+            latest = (self.identity(stream), C.string_at(pointer, length))
             with self._lock:
                 if not self._active:
                     return
-                self._latest = latest
+                previous = self._latest.get(stream)
+                if previous is None or previous[0].received_sequence < latest[0].received_sequence:
+                    self._latest[stream] = latest
         except Exception as exc:
             with self._lock:
                 report = not self._warned
@@ -57,30 +58,23 @@ class ET28EyePreview:
             return []
         try:
             now = time.monotonic()
-            if self._latest is None or now < self._next_delivery:
+            if not self._latest or now < self._next_delivery:
                 return []
-            latest, self._latest = self._latest, None
+            latest, self._latest = self._latest, {}
             # Runtime polls more often than its 20 Hz preview publisher. Decode
             # only at that rate, retaining the newest native frame in between.
             self._next_delivery = now + .05
         finally:
             self._lock.release()
-        identity, pixels = latest
         frames = []
-        # Vendor et28_interface.concat_frame and selfcheck.py identify the first
-        # horizontal half as the left eye and the second as the right eye.
-        # Bytes slicing needs no NumPy/OpenMP DLL import while SDK callbacks are
-        # live. Interleave the gray channel using bounded C-backed slice copies.
-        for offset, stream in enumerate(('left_eye', 'right_eye')):
-            eye = b''.join(pixels[start:start + self.width]
-                          for start in range(offset * self.width, self._length, self.width * 2))
+        for stream, (identity, eye) in latest.items():
             bgr = bytearray(self.width * self.height * 3)
             bgr[0::3] = bgr[1::3] = bgr[2::3] = eye
-            frames.append(VideoFrame(replace(identity, topic=stream), stream,
+            frames.append(VideoFrame(identity, stream,
                                      self.width, self.height, 'bgr', bytes(bgr), None))
         return frames
 
     def close(self):
         with self._lock:
             self._active = False
-            self._latest = None
+            self._latest.clear()

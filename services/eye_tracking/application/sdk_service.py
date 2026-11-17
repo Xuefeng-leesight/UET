@@ -24,6 +24,7 @@ import queue
 from adapters.invensun_7.sdk_driver import create_sdk_driver
 from adapters.invensun_7.data_normalizer import pick_gaze_xy
 from analysis.eye_event_postprocess import postprocess_eye_event_csv
+from analysis.seven_invensun_csv import seven_invensun_csv_header
 from application.sdk_policies import normalize_device_type, normalize_model_name, model_from_device_type, record_source_from_device_type, resolve_capture_monitor, safe_subject_name
 from application.screen_capture import ScreenCapture, recording_frame_size, write_all
 from application.mouse_cursor import CursorPainter, normalized_cursor
@@ -3488,156 +3489,8 @@ class SDKService:
             return None
 
     def _csv_header(self):
-        header = [
-            "timestamp",
-            "video_time_ms",
-            "recommend",
-            "recom_gaze_x",
-            "recom_gaze_y",
-            "recom_gaze_bit_mask",
-            "recom_gaze_point_x",
-            "recom_gaze_point_y",
-            "recom_gaze_point_z",
-            "recom_raw_point_x",
-            "recom_raw_point_y",
-            "recom_raw_point_z",
-            "recom_smooth_point_x",
-            "recom_smooth_point_y",
-            "recom_smooth_point_z",
-            "recom_origin_x",
-            "recom_origin_y",
-            "recom_origin_z",
-            "recom_direction_x",
-            "recom_direction_y",
-            "recom_direction_z",
-            "recom_re",
-        ]
-        header.extend(
-            [
-                "left_gaze_bit_mask",
-                "left_gaze_point_x",
-                "left_gaze_point_y",
-                "left_gaze_point_z",
-                "left_raw_point_x",
-                "left_raw_point_y",
-                "left_raw_point_z",
-                "left_smooth_point_x",
-                "left_smooth_point_y",
-                "left_smooth_point_z",
-                "left_origin_x",
-                "left_origin_y",
-                "left_origin_z",
-                "left_direction_x",
-                "left_direction_y",
-                "left_direction_z",
-                "left_re",
-            ]
-        )
-        # header.append("left_ex_data_0")
-        header.extend(
-            [
-                "right_gaze_bit_mask",
-                "right_gaze_point_x",
-                "right_gaze_point_y",
-                "right_gaze_point_z",
-                "right_raw_point_x",
-                "right_raw_point_y",
-                "right_raw_point_z",
-                "right_smooth_point_x",
-                "right_smooth_point_y",
-                "right_smooth_point_z",
-                "right_origin_x",
-                "right_origin_y",
-                "right_origin_z",
-                "right_direction_x",
-                "right_direction_y",
-                "right_direction_z",
-                "right_re",
-            ]
-        )
-        header.extend(
-            [
-                "left_pupil_bit_mask",
-                "left_pupil_center_x",
-                "left_pupil_center_y",
-                "left_pupil_distance",
-                "left_pupil_diameter",
-                "left_pupil_diameter_mm",
-                "left_pupil_minor_axis",
-                "left_pupil_minor_axis_mm",
-            ]
-        )
-        header.extend(
-            [
-                "right_pupil_bit_mask",
-                "right_pupil_center_x",
-                "right_pupil_center_y",
-                "right_pupil_distance",
-                "right_pupil_diameter",
-                "right_pupil_diameter_mm",
-                "right_pupil_minor_axis",
-                "right_pupil_minor_axis_mm",
-            ]
-        )
-        header.extend(
-            [
-                "left_eye_data_ex_bit_mask",
-                "left_blink",
-                "left_openness",
-                "left_eyelid_up",
-                "left_eyelid_down",
-                "left_ex_data_bit_mask",
-            ]
-        )
-        header.extend(
-            [
-                "right_eye_data_ex_bit_mask",
-                "right_blink",
-                "right_openness",
-                "right_eyelid_up",
-                "right_eyelid_down",
-                "right_ex_data_bit_mask",
-            ]
-        )
-        header.extend(
-            [
-                "fixation_timestamp",
-                "fixation_duration",
-                "fixation_timestamp_us",
-                "fixation_duration_us",
-                "fixation_timestamp_ms",
-                "fixation_duration_ms",
-                "fixation_count",
-                "fixation_state",
-                "fixation_center_x",
-                "fixation_center_y",
-                "stimulus",
-                "triggerMark",
-                "customMarker",
-            ]
-        )
-        if self.record_mouse:
-            header.extend(["mouse_x", "mouse_y"])
-        if self._is_glasses_mode():
-            header.extend(
-                [
-                    "gyro_timestamp",
-                    "quat_data[0]",
-                    "quat_data[1]",
-                    "quat_data[2]",
-                    "quat_data[3]",
-                    "gyro[0]",
-                    "gyro[1]",
-                    "gyro[2]",
-                    "accel[0]",
-                    "accel[1]",
-                    "accel[2]",
-                    "mag[0]",
-                    "mag[1]",
-                    "mag[2]",
-                ]
-            )
-        return header
+        # Shared with the Pupil/Huahong 7invensun-layout converter; keep one list.
+        return seven_invensun_csv_header(record_mouse=self.record_mouse, glasses=self._is_glasses_mode())
 
     def _format_csv_decimal(self, value, digits=6):
         if isinstance(value, bool):

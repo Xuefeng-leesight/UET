@@ -37,7 +37,8 @@ export function createCalibrationController(params: {
   calibIntervalMs: number;
   calibPoints: Array<{ x: number; y: number }>;
   calibrationMode?: 'auto' | 'click';
-  onPointTimeout?: (pointIndex: number) => void;
+  // Returns true when the caller handled the timed-out point itself (no skip).
+  onPointTimeout?: (pointIndex: number) => boolean | void;
   onPointCommandRejected?: (pointIndex: number) => void;
   // Called when a point after the first gets no sampling progress within
   // stallMs (A8: the centre correction did not take effect).
@@ -119,7 +120,7 @@ export function createCalibrationController(params: {
         details: { pointIndex: ptIdx, arrayIndex: arrIdx, pointAttempt, calibrationMode },
       });
       calibStateRef.current.pointPending = false;
-      onPointTimeout?.(ptIdx);
+      if (onPointTimeout?.(ptIdx) === true) return;
       advanceCalibration();
     }, 8000);
   };

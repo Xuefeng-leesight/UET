@@ -10,6 +10,9 @@ from ..pupil_core.feature_worker import _read_packet, _write_packet
 from ...infrastructure.pupil_parent_pipe import parent_pipe_reader, wait_for_parent
 
 
+CAMERA_WAIT_S = 5
+
+
 def plain(value):
     if isinstance(value, dict):
         return {str(k): plain(v) for k, v in value.items()}
@@ -32,9 +35,20 @@ def verified_frame_size(image, size, role, pixel_format):
 def camera_loop(task, stop, emit):
     import cv2
     import uvc
-    from .camera import FrameClock, Intrinsics, intrinsics_for, select_devices, source_clock
+    from .camera import FrameClock, Intrinsics, MissingCameras, intrinsics_for, select_devices, source_clock
     role = task['role']
-    devices = select_devices(uvc.device_list(), task.get('camera_uids', ()))
+    # Windows lists freshly plugged cameras a few seconds late: wait for all
+    # three (within the 20 s startup limit) instead of failing on the first look.
+    deadline = time.monotonic() + CAMERA_WAIT_S
+    while True:
+        try:
+            devices = select_devices(uvc.device_list(), task.get('camera_uids', ()))
+            break
+        except MissingCameras as exc:
+            if time.monotonic() >= deadline or stop.is_set():
+                logging.warning('pupil.camera missing=%s waited_s=%s role=%s', exc.missing, CAMERA_WAIT_S, role)
+                raise exc.with_wait(CAMERA_WAIT_S) from exc
+            time.sleep(.5)
     device = devices[role]
     cap = None
     detector3d = None

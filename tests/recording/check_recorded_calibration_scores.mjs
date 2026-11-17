@@ -29,6 +29,8 @@ function load(relative) {
     exports, process, console: { ...console, log() {} }, Buffer, setTimeout, clearTimeout,
     require(specifier) {
       if (specifier === 'react') return React;
+      // Icons are decoration here; any icon name renders nothing.
+      if (specifier === 'lucide-react') return new Proxy({}, { get: () => () => null });
       if (specifier.startsWith('node:')) return requireNative(specifier);
       if (specifier === 'electron') return { ipcMain: { handle: (id, callback) => { handlers[id] = callback; } } };
       if (specifier === '@/app/i18n/useLanguage') return { useLanguage: () => ({ language }) };

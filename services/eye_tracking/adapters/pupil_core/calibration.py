@@ -4,6 +4,8 @@ Only a matching setup.v2 plus fresh successful/result.v2 authorizes tracking.
 All state belongs to this connection and is discarded on cancel or failure.
 """
 
+import base64
+import json
 import math
 import logging
 import time
@@ -15,6 +17,16 @@ from .natural_feature import NaturalFeatureTracker
 from .feature_worker import FeatureWorker
 from .pupil_quality import PupilDiagnostics
 from .angular_metrics import SCORING_POLICY, score_label
+
+
+REUSABLE_PREFIX = "pupil-calibration:"
+
+
+def _json_number(value):
+    """numpy scalars/arrays in fitted parameters."""
+    if hasattr(value, "tolist"):
+        return value.tolist()
+    raise TypeError(f"Unserializable calibration value: {type(value).__name__}")
 
 
 class PupilCalibration:
@@ -178,6 +190,56 @@ class PupilCalibration:
             self.token, self.trained_audit = token, audit
             self.validation_report = audit.get("validation")
         logging.info("pupil.calibration canceled; retained_original_fit=%s", bool(self.token))
+
+    def _reusable_token(self):
+        """A receipt that also carries the fitted mapping, so a later connection can reuse it.
+
+        Only the native backend exposes its mapper; Capture keeps session receipts.
+        """
+        params = (self.result or {}).get("params") or {}
+        if getattr(self.network, "backend", "") != "native" or not hasattr(self.network, "mapping_fingerprint"):
+            return None
+        if not isinstance(params.get("binocular"), dict) or not isinstance(params.get("eyes"), list):
+            return None
+        try:
+            fingerprint = self.network.mapping_fingerprint()
+            body = json.dumps({"version": 1, "model": "PupilCore", "camera": fingerprint, "nonce": uuid.uuid4().hex,
+                               "calibrated_at": time.time(), "points": self.card_points,
+                               "params": {"binocular": params["binocular"], "eyes": params["eyes"]}},
+                              allow_nan=False, default=_json_number)
+        except (TypeError, ValueError) as exc:
+            logging.warning("pupil.calibration mapping not reusable: %s", exc)
+            return None
+        if not fingerprint:
+            return None
+        return REUSABLE_PREFIX + base64.urlsafe_b64encode(body.encode()).decode()
+
+    def restore(self, token):
+        """Reuse a mapping saved from an earlier calibration of this headset and scene camera."""
+        if self.pending:
+            raise ValueError("Calibration is already running")
+        if not isinstance(token, str) or not token.startswith(REUSABLE_PREFIX) or len(token) > 4 * 1024 * 1024:
+            raise ValueError("请在本软件完成本次 Pupil 校准；该校准结果不能复用")
+        try:
+            data = json.loads(base64.urlsafe_b64decode(token[len(REUSABLE_PREFIX):].encode()))
+        except (ValueError, TypeError) as exc:
+            raise ValueError("保存的 Pupil 校准结果已损坏，请重新校准") from exc
+        if not isinstance(data, dict) or data.get("version") != 1 or data.get("model") != "PupilCore" \
+                or not isinstance(data.get("params"), dict):
+            raise ValueError("保存的 Pupil 校准结果无法识别，请重新校准")
+        if getattr(self.network, "backend", "") != "native" or not hasattr(self.network, "restore_mapping"):
+            raise ValueError("当前 Pupil 后端不支持复用校准，请重新校准")
+        self.reset()
+        self.network.enable_pupil_detection()
+        self.network.restore_mapping(data["params"], data.get("camera"))
+        self.token = token
+        self.card_points = data.get("points")
+        # Recordings archive this instead of the original fit's samples.
+        self.trained_audit = {"version": 2, "mode": "reused_saved_calibration",
+                              "reusedCalibratedAt": data.get("calibrated_at"), "points": data.get("points"),
+                              "params": data["params"], "independentValidationPerformed": False,
+                              **(self.network.audit() if hasattr(self.network, "audit") else {})}
+        logging.info("pupil.calibration reused saved mapping; calibrated_at=%s", data.get("calibrated_at"))
 
     def complete(self):
         if not self.verified:
@@ -424,7 +486,7 @@ class PupilCalibration:
                     timestamp > max(self.success["timestamp"], self.result["timestamp"]) and
                     time.monotonic() < self.deadline):
                 self.pending = False
-                self.token = "pupil-session:" + uuid.uuid4().hex
+                self.token = self._reusable_token() or "pupil-session:" + uuid.uuid4().hex
                 logging.info("pupil.calibration verified; fresh world video resumed")
                 scores = {}
                 metrics = self.result.get('params', {}).get('training_reprojection')

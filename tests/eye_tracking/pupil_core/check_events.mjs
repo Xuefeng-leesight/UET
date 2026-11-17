@@ -36,7 +36,11 @@ const exportDir = path.join(path.dirname(csvPath), 'export');
 fs.mkdirSync(exportDir);
 load('electron/domains/recording/recordExportHandlers.ts', {
   electron: { ipcMain: { handle: (name, fn) => { handlers[name] = fn; } }, dialog: { showOpenDialog: async () => ({ filePaths: [exportDir] }) } },
-  'node:fs': fs, 'node:readline': readline, 'node:path': path, './recordPointsModel': parser,
+  'node:fs': fs, 'node:path': path,
+  './recordEt28ExportEvents': load('electron/domains/recording/recordEt28ExportEvents.ts', {
+    'node:fs': fs, 'node:readline': readline, './recordCsvParser': parser,
+    '../../../shared/domain/eyeExportData': load('shared/domain/eyeExportData.ts', { './gazeSmoothing': load('shared/domain/gazeSmoothing.ts') }),
+  }),
   '../../../shared/domain/eyeExportData': load('shared/domain/eyeExportData.ts', { './gazeSmoothing': load('shared/domain/gazeSmoothing.ts') }),
   './recordAoiExport': { AOI_EXPORT_KEYS: new Set(['aoi_id', 'aoi_name', 'aoi_hit', 'aoi_enter_time_ms', 'aoi_exit_time_ms', 'aoi_dwell_time_ms', 'aoi_fixation_count']), createRecordAoiExportDeriver: async (_path, context) => { assert.equal(context?.projectDir, undefined, 'This legacy fixture has no AOI context; full AOI IPC is covered separately.'); return undefined; } },
   '../../../shared/constants/eyeExportColumns': load('shared/constants/eyeExportColumns.ts'),

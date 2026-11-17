@@ -46,6 +46,7 @@ class HuahongRuntime:
         self.last_result, self.recording_info = {}, {}
         self.last_error, self.stimulus = '', ''
         self.tracking, self.verified, self.token = False, False, ''
+        self.reused_calibrated_at = None
         self.calibration_points, self.calibration_task, self.calibration_generation = {}, None, 0
         self.point_result = queue.Queue(1)
         self.calibration_expected = 0
@@ -117,9 +118,38 @@ class HuahongRuntime:
         self.finalizer = threading.Thread(target=finalize, name='huahong-finalizer')
         self.finalizer.start()
 
+    def _config_sha256(self):
+        return hashlib.sha256(json.dumps(self.service.config, sort_keys=True).encode()).hexdigest()
+
+    def _saved_calibration(self, coe):
+        """Validate a calibration token saved by an earlier connection.
+
+        Only this model and the same huahong.json configuration (camera
+        parameters, screen) are accepted; the feature bytes are the SDK's own.
+        """
+        try:
+            token = json.loads(coe) if isinstance(coe, str) and len(coe) <= 8 * 1024 * 1024 else None
+        except ValueError:
+            token = None
+        if not isinstance(token, dict) or token.get('version') != 1 or token.get('model') != self.model:
+            raise ValueError('Saved calibration belongs to another device; calibrate again')
+        if token.get('config_sha256') != self._config_sha256():
+            raise ValueError('Device configuration changed since this calibration; calibrate again')
+        try:
+            feature = base64.b64decode(token.get('feature') or '', validate=True)
+        except (ValueError, TypeError):
+            feature = b''
+        if not feature:
+            raise ValueError('Saved calibration has no feature data; calibrate again')
+        # Tokens saved before 11-16 carry no point count; HRT calibrates ET28 with 5 points.
+        points = token.get('points') if type(token.get('points')) is int else 5
+        quality = token.get('calibration_quality') if isinstance(token.get('calibration_quality'), dict) else None
+        return feature, points, quality
+
     def _cancel(self):
         self.calibration_generation += 1
         self.verified, self.token = False, ''
+        self.reused_calibrated_at = None
         self.calibration_quality = None
         self.service.calibration_quality = None
         # Avoid unverified concurrent calls into vendor calibration. A cancelled
@@ -171,6 +201,14 @@ class HuahongRuntime:
                     'calibration_verified': self.verified, 'timestamp_source': 'host_arrival',
                     'recovered_recordings': self.recovery_results, 'versions': self.service.versions,
                     'capabilities': asdict(self.service.capabilities)}
+        if command == 'get_device_presence':
+            # ET28 glasses must be switched on before their cameras appear. This
+            # reads the Windows device list only; the vendor SDK is not touched.
+            if self.model != 'HH_ET28' or self.service.state == 'ready':
+                return {'connected': True, 'missing': []}
+            from ..adapters.huahong.aiot_et28 import missing_et28_cameras
+            missing = missing_et28_cameras()
+            return {'connected': not missing, 'missing': missing}
         if command == 'get_recording_status':
             return {'status': 'recording' if self.recorder else 'finalizing' if self.finalizer else
                     'finalized' if self.last_result else 'idle', 'result': self.last_result, **self.recording_info}
@@ -223,7 +261,9 @@ class HuahongRuntime:
                 self.service.connect()
             return {'model': self.model, 'acquisition_ready': True}
         if command == 'stop':
-            if self.recorder or self.finalizer or self.calibration_task:
+            # Saving only needs the recorder's own files, so the device may stop
+            # while it finalizes; reconnecting still waits for the save to finish.
+            if self.recorder or self.calibration_task:
                 raise RuntimeError('Wait for recording/calibration finalization')
             self._cancel()
             with self._diagnostics.phase('service.close', timeout_s=5):
@@ -266,19 +306,21 @@ class HuahongRuntime:
                 raise ValueError('Invalid calibration coordinate')
             self.calibration_attempt = attempt
             generation = self.calibration_generation
+            session = self.calibration_session
             self.calibration_pending = (generation, index, attempt)
             self.calibration_deadline = time.monotonic() + calibration_point_timeout_s(self.model)
             def calibrate():
                 started = time.monotonic()
-                logging.info('huahong.calibration point_start model=%s index=%s attempt=%s native_timeout_s=%s',
-                             self.model, index, attempt, NATIVE_CALIBRATION_TIMEOUT_S[self.model])
+                logging.info('huahong.calibration point_start model=%s session=%s index=%s attempt=%s '
+                             'target_normalized=(%.6f,%.6f) native_timeout_s=%s',
+                             self.model, session, index, attempt, x, y, NATIVE_CALIBRATION_TIMEOUT_S[self.model])
                 error, msg = 0, ''
                 try:
                     self.service.calibration_point(x, y)
                 except Exception as exc:
                     error, msg = -1, str(exc)
-                logging.info('huahong.calibration point_result model=%s index=%s attempt=%s elapsed_ms=%s error=%s msg=%s',
-                             self.model, index, attempt, round((time.monotonic() - started) * 1000), error, msg)
+                logging.info('huahong.calibration point_result model=%s session=%s index=%s attempt=%s elapsed_ms=%s error=%s msg=%s',
+                             self.model, session, index, attempt, round((time.monotonic() - started) * 1000), error, msg)
                 self.point_result.put((generation, index, attempt, error, msg))
             self.calibration_task = threading.Thread(target=calibrate, name='huahong-calibration')
             self.calibration_task.start()
@@ -292,15 +334,15 @@ class HuahongRuntime:
                 feature = self.service.feature()
                 if not feature:
                     raise RuntimeError('Empty calibration feature')
-                token = json.dumps({'version': 1, 'model': self.model, 'generation': self.service.generation,
-                                     'config_sha256': hashlib.sha256(json.dumps(self.service.config, sort_keys=True).encode()).hexdigest(),
-                                     'feature': base64.b64encode(feature).decode(), 'nonce': uuid.uuid4().hex})
                 # The shared completion flow expects tracking to be active when
                 # it caches this coefficient, just as for the original SDK.
                 self.service.start_tracking()
                 quality = copy.deepcopy(self.service.calibration_quality) if self.model == 'HH_ET28' else None
-                if self.model == 'HH_ET28' and not quality:
-                    raise RuntimeError('Validated ET28 calibration quality is unavailable')
+                # Self-contained so a later connection can reuse it (see start_tracking).
+                token = json.dumps({'version': 1, 'model': self.model, 'generation': self.service.generation,
+                                     'config_sha256': self._config_sha256(), 'points': self.calibration_expected,
+                                     'feature': base64.b64encode(feature).decode(), 'nonce': uuid.uuid4().hex,
+                                     'calibrated_at': time.time(), 'calibration_quality': quality})
                 scores = ({'left_score': _calibration_mean(quality, 'left'),
                            'right_score': _calibration_mean(quality, 'right'),
                            'calibration_quality': copy.deepcopy(quality)} if quality else {})
@@ -314,11 +356,29 @@ class HuahongRuntime:
             self.calibration_expected = 0
             return {'coe': self.token, 'calibration_provider': self.model, 'tracking_error': 0, **scores}
         if command == 'start_tracking':
-            if not self.verified or args.get('coe') != self.token:
-                raise ValueError('Complete calibration in this connection; stale or foreign coefficients rejected')
-            self.service.start_tracking()
-            self.tracking = True
-            return {}
+            coe = args.get('coe')
+            if self.verified and coe == self.token:
+                self.service.start_tracking()
+                self.tracking = True
+                return {}
+            # A calibration saved earlier for this subject and device: load its
+            # feature, as the vendor demos do with cablic.dat.
+            if self.recorder or self.finalizer or self.calibration_task:
+                raise RuntimeError('Stop recording and wait for pending calibration')
+            feature, points, quality = self._saved_calibration(coe)
+            self._cancel()
+            self.verified, self.tracking, self.token = False, False, ''
+            try:
+                self.service.restore_calibration(feature, points)
+                self.service.start_tracking()
+            except Exception:
+                self.service.calibration_quality = None
+                raise
+            self.token, self.verified, self.tracking = coe, True, True
+            self.calibration_quality = quality
+            self.reused_calibrated_at = json.loads(coe).get('calibrated_at')
+            logging.info('huahong.calibration reused model=%s points=%s', self.model, points)
+            return {'calibration_reused': True}
         if command == 'stop_tracking':
             if self.recorder or self.finalizer:
                 raise RuntimeError('Stop recording before stopping tracking')
@@ -355,6 +415,8 @@ class HuahongRuntime:
                     'model': self.model, 'versions': self.service.versions},
                 metadata={'subjectName': args.get('subject_name', ''), 'deviceType': '桌面式' if self.model == 'HH_ET10C' else '眼镜式',
                           'calibrationVerified': True, 'calibrationProvider': self.model,
+                          **({'calibrationReused': True, 'reusedCalibratedAt': self.reused_calibrated_at}
+                             if self.reused_calibrated_at is not None else {}),
                           **({'calibrationQuality': copy.deepcopy(self.calibration_quality),
                               'calibrationLeftScore': _calibration_mean(self.calibration_quality, 'left'),
                               'calibrationRightScore': _calibration_mean(self.calibration_quality, 'right')}

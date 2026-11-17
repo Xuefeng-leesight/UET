@@ -153,11 +153,16 @@ export async function startCamera(params: {
   }
 
   setIsCameraOn(true);
-  // Capture calibration receipts are scoped to the current connection only.
-  if (['PupilCore', 'HH_ET10C', 'HH_ET28'].includes(deviceModel || '')) return { ok: true };
+  const integratedModel = ['PupilCore', 'HH_ET10C', 'HH_ET28'].includes(deviceModel || '');
   const coe = typeof calibrationCoe === 'string' ? calibrationCoe.trim() : '';
   if (!coe) {
     return { ok: true };
+  }
+  if (integratedModel) {
+    // Huahong/Pupil: the service validates the saved calibration against this
+    // device. A rejection keeps the device running; the subject recalibrates.
+    const reuseRsp = await sendCmdWithResponse({ wsCmdRef, id: 'start_tracking', args: { coe }, timeoutMs: trackingTimeoutMs });
+    return reuseRsp.ok ? { ok: true } : { ok: true, trackingError: reuseRsp.error || '沿用校准失败' };
   }
 
   console.log('[cameraModule] restore tracking', { deviceType, coeLen: coe.length });

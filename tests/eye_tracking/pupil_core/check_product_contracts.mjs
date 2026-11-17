@@ -25,7 +25,10 @@ function load(file, dependencies = {}, globals = {}) {
 
 const profiles = load('src/features/recording/device/deviceProfile.ts');
 const models = load('shared/contracts/domain/models.ts');
-const modalities = load('shared/domain/projectModalities.ts', { '../contracts/domain/models': models });
+const modalityAvailability = load('shared/domain/modalityAvailability.ts');
+const modalities = load('shared/domain/projectModalities.ts', {
+  '../contracts/domain/models': models, './modalityAvailability': modalityAvailability,
+});
 const sdkModule = { DEFAULT_SDK_MODEL: 'Pro', DESKTOP_SDK_MODELS: new Set(['Pro', 'A8']), GLASSES_SDK_MODEL: 'aSeeGlassesPlus' };
 const sdk = load('electron/platform/sdk/sdkSelection.ts', { './sdkRuntime': sdkModule }).createSdkSelection({});
 for (const [model, kind] of [['Pro', '桌面式'], ['A8', '桌面式'], ['aSeeGlassesPlus', '眼镜式'], ['PupilCore', '眼镜式']]) {
@@ -47,7 +50,9 @@ const finalizers = [];
 const flow = load('src/features/recording/domain/calibrationFlow.ts', {
   '@/infrastructure/electron/ipcClient': { ipcClient: { videoDebugLog() {} } },
 }, { setTimeout: (fn) => { finalizers.push(fn); return 1; } });
-const terms = load('src/app/i18n/i18nConfig.ts').EN_TERM_MAP;
+const terms = load('src/app/i18n/i18nConfig.ts', {
+  '@/app/i18n/jaTranslations': load('src/app/i18n/jaTranslations.ts'),
+}).EN_TERM_MAP;
 for (const count of [3, 5, 9]) {
   const sequence = Array.from({ length: count }, (_, index) => index);
   assert.deepEqual(json(flow.getPupilCalibrationSequence(count)), sequence);
@@ -114,7 +119,8 @@ for (const model of ['Pro', 'A8', 'aSeeGlassesPlus', 'PupilCore']) {
   const result = await camera.startCamera({ wsCmdRef: { current: null }, deviceModel: model,
     deviceType: profiles.deviceTypeFromModel(model), calibrationCoe: 'old-coefficients', setIsCameraOn() {} });
   assert.equal(result.ok, true);
-  assert.deepEqual(calls, model === 'PupilCore' ? ['stop', model] : ['stop', model, 'start_tracking']);
+  // Every model restores the saved calibration; Pupil/Huahong validate it in their own service.
+  assert.deepEqual(calls, ['stop', model, 'start_tracking']);
 }
 
 const launch = load('electron/platform/python/pupilLaunch.ts', { 'node:fs': fs, 'node:path': path });
@@ -147,12 +153,12 @@ const resource = JSON.parse(fs.readFileSync('package.json', 'utf8')).build.extra
 assert.ok(resource.some((entry) => entry.from === 'services/dist/pupil-backend' && entry.to === 'py/pupil-backend'));
 const probeLaunch = load('electron/platform/python/pupilLaunch.ts', {
   'node:path': path,
-  'node:fs': { existsSync: (file) => file === '/tools with spaces/ffprobe.exe',
+  'node:fs': { existsSync: (file) => file === path.join('/tools with spaces', 'ffprobe.exe'),
     statSync: () => ({ isFile: () => true }) },
 });
 const probeCommand = probeLaunch.buildPupilCommand({ ...options, platform: 'win32',
   ffmpeg: '/tools with spaces/ffmpeg.exe' });
-assert.equal(probeCommand.args[probeCommand.args.indexOf('--ffprobe') + 1], '/tools with spaces/ffprobe.exe');
+assert.equal(probeCommand.args[probeCommand.args.indexOf('--ffprobe') + 1], path.join('/tools with spaces', 'ffprobe.exe'));
 const explicitProbe = probeLaunch.buildPupilCommand({ ...options,
   env: { ...options.env, MRT_FFPROBE_PATH: '/explicit/ffprobe' } });
 assert.equal(explicitProbe.args[explicitProbe.args.indexOf('--ffprobe') + 1], '/explicit/ffprobe');
@@ -303,7 +309,7 @@ try {
     assert.equal(records.records.find(r => r.deviceModel === 'PupilCore').samplingRateHz, 246.96);
     assert.equal(records.records.find(r => r.deviceModel === 'aSeeGlassesPlus').samplingRateHz, 240);
   }
-  assert.equal(JSON.parse(fs.readFileSync(path.join(temp, '.config/recordings-summary.json'))).version, 10);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(temp, '.config/recordings-summary.json'))).version, 12);
 } finally {
   fs.rmSync(temp, { recursive: true, force: true });
 }

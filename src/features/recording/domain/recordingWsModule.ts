@@ -1,6 +1,6 @@
 import type React from 'react';
 import { finishRecordingCommunication } from '@/features/recording/domain/recordingCommunication';
-import { calibrationScoresFromCompletion, type CalibrationScores } from '@/features/recording/domain/calibrationScores';
+import { calibrationScoresFromCompletion, parseEt28CalibrationQuality, type CalibrationScores } from '@/features/recording/domain/calibrationScores';
 import { ipcClient } from '@/infrastructure/electron/ipcClient';
 import {
   createWebCodecsRenderer,
@@ -1025,6 +1025,7 @@ export function connectCmdWebSocket(params: {
   setCalibrationCoe: (v: string | null) => void;
   setCalibrationScores?: React.Dispatch<React.SetStateAction<CalibrationScores | null>>;
   onCalibrationTrackerReady?: (ready: boolean) => void;
+  onEt28CalibrationResult?: (quality: ReturnType<typeof parseEt28CalibrationQuality>, points: number) => void;
   onTrackingCoeActivated?: (coe: string) => void;
   onDeviceError?: (message: string) => void;
   onRecordingFinalized?: (result: {
@@ -1043,6 +1044,12 @@ export function connectCmdWebSocket(params: {
   advanceCalibration: () => void;
   onCalibrationPointFinished?: (pointIndex: number) => void;
   onCalibrationPointProgress?: (progress: { pointIndex: number; completedCallbacks: number; expectedCallbacks: number; error: number | null; message?: string }) => void;
+  // Auto calibration: the SDK rejected the current point (e.g. -10/-11). The
+  // point is not counted; the caller retries it, restarts or stops calibration.
+  onCalibrationPointError?: (info: { pointIndex: number; error: number }) => void;
+  // A desktop result was rejected for its scores. Returns true when the caller
+  // re-applies the previous calibration (the service itself could not).
+  onCalibrationScoreRejected?: () => boolean;
 }): void {
   const {
     wsIp,
@@ -1056,6 +1063,7 @@ export function connectCmdWebSocket(params: {
     setCalibrationScores,
     onTrackingCoeActivated,
     onCalibrationTrackerReady,
+    onEt28CalibrationResult,
     onDeviceError,
     onRecordingFinalized,
     calibStateRef,
@@ -1063,6 +1071,8 @@ export function connectCmdWebSocket(params: {
     advanceCalibration,
     onCalibrationPointFinished,
     onCalibrationPointProgress,
+    onCalibrationPointError,
+    onCalibrationScoreRejected,
   } = params;
 
   const getPhysicalDimensionsInMM = (width: number, height: number) => {
@@ -1262,7 +1272,46 @@ export function connectCmdWebSocket(params: {
           } else if (msg.id === 'complete_calibration') {
             if (msg.error === 0 && msg.calibration_provider === 'PupilCore' && !calibStateRef.current.pointPending) return;
             if (msg.error === 0 && msg.result_pending) return;
-            if (msg.error === 0) {
+            // The SDK reports success even when an eye failed (score 0 or
+            // negative), so the scores decide whether the result is usable.
+            // msg.score_rejected: the service refused it even if the scores read as fine here.
+            const rightScoreRaw = msg.right_score ?? msg.right_scroe;
+            const scoreRejected = msg.error === 0 && !msg.calibration_provider && calibrationMode !== 'click'
+              && (describeOutOfRangeCalibrationScores(msg.left_score, rightScoreRaw) !== null || msg.score_rejected === true);
+            if (scoreRejected) {
+              // The service did not apply this coefficient and resumed the
+              // previous one, so it is neither kept nor saved here; keeping it
+              // would make it the subject's calibration and the next start point.
+              // After an A8 restart the service has no previous coefficient; the
+              // caller re-applies the subject's one instead.
+              const previousCalibrationActive = msg.previous_calibration_active === true
+                || onCalibrationScoreRejected?.() === true;
+              void ipcClient.videoDebugLog({
+                event: 'calibration:score-rejected',
+                details: {
+                  leftScore: msg.left_score ?? null,
+                  rightScore: rightScoreRaw ?? null,
+                  previousCalibrationActive,
+                },
+              });
+              setCalibrationState('none');
+              setCalibScale(1.0);
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch((err) => console.error(err));
+              }
+              if (ipcClient.isAvailable()) {
+                void ipcClient.setWindowFullScreen({ fullscreen: false });
+              }
+              const formatScore = (raw: unknown) => {
+                const score = Number(raw);
+                return raw === null || raw === undefined || raw === '' || !Number.isFinite(score)
+                  ? '—'
+                  : String(Math.round(score * 10) / 10);
+              };
+              alert(`校准结果不合格（左眼 ${formatScore(msg.left_score)} 分、右眼 ${formatScore(rightScoreRaw)} 分，需在 ${CALIBRATION_SCORE_MIN}～${CALIBRATION_SCORE_MAX} 分之间），本次结果未保存，${
+                previousCalibrationActive ? '仍使用上一次的校准' : '当前没有可用的校准'
+              }。请让受试者坐好、双眼都在画面中，然后重新校准。`);
+            } else if (msg.error === 0) {
               setCalibrationCoe(msg.coe || null);
               const trackingErrRaw = msg.tracking_error;
               const trackingErr = typeof trackingErrRaw === 'number' ? trackingErrRaw : Number(trackingErrRaw);
@@ -1273,15 +1322,10 @@ export function connectCmdWebSocket(params: {
               setCalibrationScores?.((previous) => calibrationScoresFromCompletion(previous, msg));
               setCalibrationState('finished');
               setCalibScale(1.0);
-              const scoreProblem = !msg.calibration_provider && calibrationMode !== 'click'
-                ? describeOutOfRangeCalibrationScores(msg.left_score, msg.right_score ?? msg.right_scroe)
-                : null;
               if (!trackingOk) {
                 alert(`校准成功，但追踪未启动（${msg.tracking_msg || trackingErr}）。请重试校准或重新启动设备。`);
-              } else if (scoreProblem) {
-                // The SDK returns success even when one eye failed (e.g. a
-                // negative score), so the scores decide whether to recalibrate.
-                alert(`校准完成，但${scoreProblem}，不在 ${CALIBRATION_SCORE_MIN}～${CALIBRATION_SCORE_MAX} 之间，校准结果不可靠。请让受试者坐好、双眼都在画面中，然后重新校准。`);
+              } else if (msg.calibration_provider === 'HH_ET28' && onEt28CalibrationResult) {
+                onEt28CalibrationResult(parseEt28CalibrationQuality(msg.calibration_quality), calibStateRef.current.points ?? 0);
               } else {
                 alert(msg.calibration_provider === 'PupilCore'
                   ? msg.validation || msg.training_angular ? String(msg.msg) : `${msg.score_semantics === 'training_reprojection_error_px' ? '左右眼数值为校准训练平均重投影误差（像素，越小越好），不是独立精度得分。\n' : ''}校准拟合完成。请点击校准测试采样独立目标，验证实际偏差。`
@@ -1425,6 +1469,37 @@ export function connectCmdWebSocket(params: {
             finishPointAttempt = null;
             finishedEyesForPoint = new Set();
             cancelledEyesForPoint = new Set();
+            return;
+          }
+          // Auto mode: a point the SDK finished with an error was not sampled.
+          // Counting it as done leaves the calibration a point short and the
+          // SDK then scores both eyes 0, so hand it to the caller instead.
+          const autoPointError = Number(msg?.error ?? 0);
+          // Only the 7invensun desktop SDK (no source tag) reports point errors this way.
+          if (calibrationMode !== 'click' && !msg.source && onCalibrationPointError && Number.isFinite(autoPointError) && autoPointError !== 0) {
+            const notifyIndex = Number(msg?.index ?? NaN);
+            const currentPointIndex = Number(calibStateRef.current.pointIndex ?? -1);
+            if (Number.isFinite(notifyIndex) && notifyIndex !== currentPointIndex) {
+              void ipcClient.videoDebugLog({
+                event: 'calibration:stale-point-error-ignored',
+                details: { notifyIndex, currentPointIndex, error: autoPointError },
+              });
+              return;
+            }
+            calibStateRef.current.pointPending = false;
+            if (calibStateRef.current.safetyTimerId) {
+              window.clearTimeout(calibStateRef.current.safetyTimerId);
+              calibStateRef.current.safetyTimerId = null;
+            }
+            void ipcClient.videoDebugLog({
+              event: 'calibration:point-error',
+              details: {
+                pointIndex: currentPointIndex,
+                pointAttempt: Number(calibStateRef.current.pointAttempt ?? 0),
+                error: autoPointError,
+              },
+            });
+            onCalibrationPointError({ pointIndex: currentPointIndex, error: autoPointError });
             return;
           }
           const expectedFinishCallbacks = calibrationMode === 'click' ? 2 : 1;

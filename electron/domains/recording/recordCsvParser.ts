@@ -264,8 +264,8 @@ export const parseCsvPartsToHeatmapPoint = (parts: string[], state: CsvPointPars
   const parsePupilSide = (mmIdx: number, baseIdx: number): number | undefined => {
     const mm = getValue(mmIdx)
     if (Number.isFinite(mm) && mm > 0) return mm
-    // Pupil's unqualified diameter is an image-width ratio (legacy files: pixels), never millimetres.
-    if (getStringValue(idx.sourceModel) === 'PupilCore') return undefined
+    // Pupil and ET28 record image-width ratios in the unqualified column.
+    if (['PupilCore', 'HH_ET28'].includes(getStringValue(idx.sourceModel))) return undefined
     const raw = getValue(baseIdx)
     return Number.isFinite(raw) && raw > 0 ? raw : undefined
   }

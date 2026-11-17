@@ -23,6 +23,8 @@ const et28Eye = (values) => ({ count: values.length, truncated: false,
   points: values.map((score, index) => ({ index: index + 1, status: index % 2, score, bias: [0, null] })) });
 const et28Quality = { version: 1, provider: 'HH_ET28', aggregation: 'arithmetic_mean',
   left: et28Eye([100, 97, 101]), right: et28Eye([101, 102, 103]) };
+et28Quality.left.points[0].status = 2;
+et28Quality.right.points[0].status = 3;
 const et28Message = { calibration_provider: 'HH_ET28', calibration_quality: et28Quality, left_score: 0, right_score: 0 };
 const et28Scores = calibrationScoresFromCompletion(null, et28Message);
 assert.equal(et28Scores.left, 298 / 3);
@@ -41,7 +43,7 @@ for (const mutate of [
   (quality) => { quality.left.truncated = true; },
   (quality) => { quality.left.points.pop(); },
   (quality) => { quality.left.points[0].index = 2; },
-  (quality) => { quality.left.points[0].status = 2; },
+  (quality) => { quality.left.points[0].status = 0x80000000; },
   (quality) => { quality.left.points[0].score = -1; },
   (quality) => { quality.left.points[0].score = 0x100000000; },
   (quality) => { quality.left.points[0].score = '100'; },
@@ -199,12 +201,26 @@ for (const [model, testMode, state, scores, expected] of [
   vm.runInNewContext(runSaveEffect, {
     recordingSettings: { saveEyeCalibration: true, calibrationType: 'three' }, simulateMode: false,
     calibrationState: state, isCalibrationTestMode: testMode, activeDeviceModel: model,
+    calibrationDeviceModelRef: { current: model },
     activeDataDir: '/experiment', calibrationCoe: 'test-token', calibrationScores: scores,
     currentRecordingSubjectId: 'subject', currentRecordingSubjectName: 'Test',
     ipcClient: { isAvailable: () => true, saveCalibrationResult: (payload) => saved.push(json(payload)) },
   });
   assert.equal(saved.length, expected, `${model}/${testMode}/${state}`);
   if (saved.length) assert.deepEqual(json(parseCalibrationPayload(saved[0].result).scores), json(scores));
+}
+{
+  // After switching devices the old 'finished' result must not be saved under the new device.
+  const saved = [];
+  vm.runInNewContext(runSaveEffect, {
+    recordingSettings: { saveEyeCalibration: true, calibrationType: 'three' }, simulateMode: false,
+    calibrationState: 'finished', isCalibrationTestMode: false, activeDeviceModel: 'aSeeGlassesPlus',
+    calibrationDeviceModelRef: { current: 'PupilCore' },
+    activeDataDir: '/experiment', calibrationCoe: 'test-token', calibrationScores: trained,
+    currentRecordingSubjectId: 'subject', currentRecordingSubjectName: 'Test',
+    ipcClient: { isAvailable: () => true, saveCalibrationResult: (payload) => saved.push(json(payload)) },
+  });
+  assert.equal(saved.length, 0, 'A calibration is saved only for the device that produced it.');
 }
 
 // Exercise score writes through the real WS lifecycle, including pending/late/canceled results.

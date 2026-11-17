@@ -118,14 +118,14 @@ for (const [model, kind, source] of [['HH_ET10C', '桌面式', 'screen'], ['HH_E
   assert.equal(selection.modelFromDeviceType(kind, model), model);
   const options = { appDir: path.resolve('dist-electron'), resourcesPath: '', packaged: false, platform: 'win32',
     env: { MRT_SDK_MODEL: model, MRT_HUAHONG_PROJECT_ROOT: '/authorized project', MRT_HUAHONG_PYTHON_BIN: '/isolated/python',
-      MRT_SDK_ROOT: '/old-vendor', MRT_SOFTDOG_PWD: 'test', ET28_DLL_DIR: '/old-et28' },
+      MRT_SDK_ROOT: '/old-vendor', MRT_SOFTDOG_PWD: 'test', ET28_DLL_DIR: '/old-et28', AIOTGLASS_SDK_DIR: '/old-aiot' },
     ffmpeg: '/ffmpeg', rendererUrl: 'http://localhost:31873' };
   const command = launch.buildHuahongCommand(options);
   assert.equal(command.command, '/isolated/python');
   assert.ok(command.args.includes('services.eye_tracking.entrypoints.huahong_server'));
   assert.ok(command.args.includes(model));
   assert.ok(command.args.includes('/authorized project'));
-  for (const key of ['MRT_SDK_ROOT', 'MRT_SOFTDOG_PWD', 'ET28_DLL_DIR']) assert.equal(command.env[key], undefined);
+  for (const key of ['MRT_SDK_ROOT', 'MRT_SOFTDOG_PWD', 'ET28_DLL_DIR', 'AIOTGLASS_SDK_DIR']) assert.equal(command.env[key], undefined);
   assert.equal(options.env.MRT_SDK_ROOT, '/old-vendor');
   assert.throws(() => launch.buildHuahongCommand({ ...options, platform: 'darwin' }), /Windows/);
   assert.throws(() => launch.buildHuahongCommand({ ...options, env: { MRT_SDK_MODEL: model } }), /授权/);
@@ -133,7 +133,7 @@ for (const [model, kind, source] of [['HH_ET10C', '桌面式', 'screen'], ['HH_E
 }
 const packaging = JSON.parse(fs.readFileSync('package.json', 'utf8')).build.extraResources;
 assert.ok(packaging.find(item => item.from === 'SDK').filter.includes('!huahong{,/**}'));
-assert.deepEqual(packaging.find(item => item.from === 'SDK/huahong/et28/bin/windows/x64').filter, ['*.dll']);
+assert.deepEqual(packaging.find(item => item.from === 'SDK/huahong/et28-aiot/bin/windows/x64').filter, ['*.dll']);
 assert.ok(packaging.some(item => item.to === 'py/mrt-huahong-server'));
 await import('./check_calibration_flow.mjs');
 await import('./check_process_diagnostics.mjs');

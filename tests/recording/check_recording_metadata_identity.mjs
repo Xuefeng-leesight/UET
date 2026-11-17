@@ -76,7 +76,9 @@ function visit(node) {
   if (ts.isVariableDeclaration(node) && node.name.getText(tree) === 'resetDeviceUiState') {
     resetDevice = node.initializer.arguments[0].getText(tree);
   }
-  if (ts.isVariableDeclaration(node) && node.name.getText(tree) === 'stopDeviceGracefully') {
+  // The teardown itself lives in runStopDeviceGracefully; stopDeviceGracefully only
+  // tracks the in-flight stop around it.
+  if (ts.isVariableDeclaration(node) && node.name.getText(tree) === 'runStopDeviceGracefully') {
     stopDevice = node.initializer.arguments[0].getText(tree);
   }
   ts.forEachChild(node, visit);
@@ -276,7 +278,7 @@ const coreCode = ts.transpileModule(`globalThis.startCore = ${core};`, {
   const ref = current => ({ current });
   const oldReply = deferred();
   const ctx = { Date, recordingLifecycle: lifecycle, activeDeviceProfile: { deviceType: '眼镜式', stimulusEnabled: false },
-    recordingSettings: {}, playbackOrderRef: ref(null), playbackSequenceRef: ref(null), setPlaybackIndex() {},
+    recordingSettings: {}, recordMouseActive: false, playbackOrderRef: ref(null), playbackSequenceRef: ref(null), setPlaybackIndex() {},
     currentStimulusNameRef: ref(''), currentTriggerMarkRef: ref(''), stimuli: [], subjects: [],
     currentRecordingSubjectName: '张三', currentRecordingSubject: null, currentRecordingSubjectId: 'subject',
     calibrationScores: { left: 8, right: 9 }, recordingMetaPendingRef: ref(null), activeDataDir: '/project',

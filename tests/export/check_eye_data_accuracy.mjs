@@ -206,9 +206,9 @@ assert.ok(metadataFunction);
 const buildRecordMetadataValues = vm.runInNewContext(compile(`(${metadataFunction.getText(ast)})`), {
   ...data, resolveRecordExportName: record => record.name,
 });
-// Execute the production initial-selection effect against a snapshot of the established 133-column order.
-const legacyFieldOrder = ["record_name","user","eye_data_record","time_of_day","video_time_ms","timestamp","tracking_ratio_pct","sampling_rate_hz","configured_sampling_rate_hz","record_duration_s","left_pupil_bit_mask","left_pupil_center_x","left_pupil_center_y","left_pupil_minor_axis","left_pupil_minor_axis_mm","right_pupil_bit_mask","right_pupil_center_x","right_pupil_center_y","right_pupil_minor_axis","right_pupil_minor_axis_mm","left_pupil_diameter","right_pupil_diameter","left_pupil_diameter_mm","right_pupil_diameter_mm","left_pupil_distance","right_pupil_distance","recommend","recom_gaze_x","recom_gaze_y","recom_gaze_bit_mask","recom_gaze_point_x","recom_gaze_point_y","recom_gaze_point_z","recom_raw_point_x","recom_raw_point_y","recom_raw_point_z","recom_smooth_point_x","recom_smooth_point_y","recom_smooth_point_z","recom_origin_x","recom_origin_y","recom_origin_z","recom_direction_x","recom_direction_y","recom_direction_z","recom_re","left_gaze_x","left_gaze_y","left_gaze_bit_mask","left_gaze_point_x","left_gaze_point_y","left_gaze_point_z","left_raw_point_x","left_raw_point_y","left_raw_point_z","left_smooth_point_x","left_smooth_point_y","left_smooth_point_z","left_origin_x","left_origin_y","left_origin_z","left_direction_x","left_direction_y","left_direction_z","left_re","right_gaze_x","right_gaze_y","right_gaze_bit_mask","right_gaze_point_x","right_gaze_point_y","right_gaze_point_z","right_raw_point_x","right_raw_point_y","right_raw_point_z","right_smooth_point_x","right_smooth_point_y","right_smooth_point_z","right_origin_x","right_origin_y","right_origin_z","right_direction_x","right_direction_y","right_direction_z","right_re","fixation_timestamp","fixation_duration","fixation_count","fixation_state","fixation_center_x","fixation_center_y","invalid_gaze_index","invalid_gaze_duration_ms","saccade_index","saccade_duration_ms","saccade_amplitude_px","average_saccade_velocity_px_ms","peak_saccade_velocity_px_ms","gaze_velocity_px_ms","gaze_velocity_deg_ms","saccade_distance_deg","average_saccade_velocity_deg_ms","peak_saccade_velocity_deg_ms","gaze_velocity_ms","blink_index","blink_duration_ms","blink_marker","left_blink","left_openness","left_eyelid_up","left_eyelid_down","right_blink","right_openness","right_eyelid_up","right_eyelid_down","gyro_timestamp","gyro_quaternion","gyroscope","acceleration","magnetometer","aoi_id","aoi_name","aoi_hit","aoi_enter_time_ms","aoi_exit_time_ms","aoi_dwell_time_ms","aoi_fixation_count","stimulus","triggerMark","customMarker","udp_send","udp_receive","trigger_send","trigger_receive"];
-const legacyHeaders = ["Record name","User","Eye data record","Time of day[hh:mm:ss.ms]","Video time[hh:mm:ss.ms]","Timestamp[ms]","Tracking ratio[%]","Sampling rate hz","Configured sampling rate hz","Record duration s","Left pupil bit mask","Left pupil center x","Left pupil center y","Left pupil minor axis","Left pupil minor axis mm","Right pupil bit mask","Right pupil center x","Right pupil center y","Right pupil minor axis","Right pupil minor axis mm","Left pupil diameter","Right pupil diameter","Left pupil diameter mm","Right pupil diameter mm","Left pupil distance","Right pupil distance","Recommend","Recom gaze x","Recom gaze y","Recom gaze bit mask","Recom gaze point x","Recom gaze point y","Recom gaze point z","Recom raw point x","Recom raw point y","Recom raw point z","Recom smooth point x","Recom smooth point y","Recom smooth point z","Recom origin x","Recom origin y","Recom origin z","Recom direction x","Recom direction y","Recom direction z","Recom re","Left gaze x","Left gaze y","Left gaze bit mask","Left gaze point x","Left gaze point y","Left gaze point z","Left raw point x","Left raw point y","Left raw point z","Left smooth point x","Left smooth point y","Left smooth point z","Left origin x","Left origin y","Left origin z","Left direction x","Left direction y","Left direction z","Left re","Right gaze x","Right gaze y","Right gaze bit mask","Right gaze point x","Right gaze point y","Right gaze point z","Right raw point x","Right raw point y","Right raw point z","Right smooth point x","Right smooth point y","Right smooth point z","Right origin x","Right origin y","Right origin z","Right direction x","Right direction y","Right direction z","Right re","Fixation timestamp[ms]","Fixation duration[ms]","Fixation index","Fixation state","Fixation point x[px]","Fixation point y[px]","Invalid gaze index","Invalid gaze duration[ms]","Saccade index","Saccade duration[ms]","Saccade amplitude[px]","Average saccade velocity[px/ms]","Peak saccade velocity[px/ms]","Gaze velocity[px/ms]","Gaze velocity[deg/ms]","Saccade distance[deg]","Average saccade velocity[deg/ms]","Peak saccade velocity[deg/ms]","Gaze velocity ms","Blink index","Blink duration[ms]","Blink marker","Left blink","Left openness","Left eyelid up","Left eyelid down","Right blink","Right openness","Right eyelid up","Right eyelid down","Gyroscope timestamp","Quat_data","Gyro","Accel","Mag","Aoi id","Aoi name","Aoi hit","Aoi enter time ms","Aoi exit time ms","Aoi dwell time ms","Aoi fixation count","Stimulus","Trigger mark","Custom marker","Udp send","Udp receive","Trigger send","Trigger receive"];
+// Execute the production initial-selection effect against a snapshot of the established 135-column order.
+const legacyFieldOrder = ["record_name","user","eye_data_record","time_of_day","video_time_ms","timestamp","tracking_ratio_pct","sampling_rate_hz","configured_sampling_rate_hz","record_duration_s","left_pupil_bit_mask","left_pupil_center_x","left_pupil_center_y","left_pupil_minor_axis","left_pupil_minor_axis_mm","right_pupil_bit_mask","right_pupil_center_x","right_pupil_center_y","right_pupil_minor_axis","right_pupil_minor_axis_mm","left_pupil_diameter","right_pupil_diameter","left_pupil_diameter_mm","right_pupil_diameter_mm","left_pupil_distance","right_pupil_distance","recommend","recom_gaze_x","recom_gaze_y","recom_gaze_bit_mask","recom_gaze_point_x","recom_gaze_point_y","recom_gaze_point_z","recom_raw_point_x","recom_raw_point_y","recom_raw_point_z","recom_smooth_point_x","recom_smooth_point_y","recom_smooth_point_z","recom_origin_x","recom_origin_y","recom_origin_z","recom_direction_x","recom_direction_y","recom_direction_z","recom_re","left_gaze_x","left_gaze_y","left_gaze_bit_mask","left_gaze_point_x","left_gaze_point_y","left_gaze_point_z","left_raw_point_x","left_raw_point_y","left_raw_point_z","left_smooth_point_x","left_smooth_point_y","left_smooth_point_z","left_origin_x","left_origin_y","left_origin_z","left_direction_x","left_direction_y","left_direction_z","left_re","right_gaze_x","right_gaze_y","right_gaze_bit_mask","right_gaze_point_x","right_gaze_point_y","right_gaze_point_z","right_raw_point_x","right_raw_point_y","right_raw_point_z","right_smooth_point_x","right_smooth_point_y","right_smooth_point_z","right_origin_x","right_origin_y","right_origin_z","right_direction_x","right_direction_y","right_direction_z","right_re","fixation_timestamp","fixation_duration","fixation_count","fixation_state","fixation_center_x","fixation_center_y","invalid_gaze_index","invalid_gaze_duration_ms","saccade_index","saccade_duration_ms","saccade_amplitude_px","average_saccade_velocity_px_ms","peak_saccade_velocity_px_ms","gaze_velocity_px_ms","gaze_velocity_deg_ms","saccade_distance_deg","average_saccade_velocity_deg_ms","peak_saccade_velocity_deg_ms","gaze_velocity_ms","blink_index","blink_duration_ms","blink_marker","left_blink","left_openness","left_eyelid_up","left_eyelid_down","right_blink","right_openness","right_eyelid_up","right_eyelid_down","gyro_timestamp","gyro_quaternion","gyroscope","acceleration","magnetometer","aoi_id","aoi_name","aoi_hit","aoi_enter_time_ms","aoi_exit_time_ms","aoi_dwell_time_ms","aoi_fixation_count","stimulus","triggerMark","customMarker","mouse_x","mouse_y","udp_send","udp_receive","trigger_send","trigger_receive"];
+const legacyHeaders = ["Record name","User","Eye data record","Time of day[hh:mm:ss.ms]","Video time[hh:mm:ss.ms]","Timestamp[ms]","Tracking ratio[%]","Sampling rate hz","Configured sampling rate hz","Record duration s","Left pupil bit mask","Left pupil center x","Left pupil center y","Left pupil minor axis","Left pupil minor axis mm","Right pupil bit mask","Right pupil center x","Right pupil center y","Right pupil minor axis","Right pupil minor axis mm","Left pupil diameter","Right pupil diameter","Left pupil diameter mm","Right pupil diameter mm","Left pupil distance","Right pupil distance","Recommend","Recom gaze x","Recom gaze y","Recom gaze bit mask","Recom gaze point x","Recom gaze point y","Recom gaze point z","Recom raw point x","Recom raw point y","Recom raw point z","Recom smooth point x","Recom smooth point y","Recom smooth point z","Recom origin x","Recom origin y","Recom origin z","Recom direction x","Recom direction y","Recom direction z","Recom re","Left gaze x","Left gaze y","Left gaze bit mask","Left gaze point x","Left gaze point y","Left gaze point z","Left raw point x","Left raw point y","Left raw point z","Left smooth point x","Left smooth point y","Left smooth point z","Left origin x","Left origin y","Left origin z","Left direction x","Left direction y","Left direction z","Left re","Right gaze x","Right gaze y","Right gaze bit mask","Right gaze point x","Right gaze point y","Right gaze point z","Right raw point x","Right raw point y","Right raw point z","Right smooth point x","Right smooth point y","Right smooth point z","Right origin x","Right origin y","Right origin z","Right direction x","Right direction y","Right direction z","Right re","Fixation timestamp[ms]","Fixation duration[ms]","Fixation index","Fixation state","Fixation point x[px]","Fixation point y[px]","Invalid gaze index","Invalid gaze duration[ms]","Saccade index","Saccade duration[ms]","Saccade amplitude[px]","Average saccade velocity[px/ms]","Peak saccade velocity[px/ms]","Gaze velocity[px/ms]","Gaze velocity[deg/ms]","Saccade distance[deg]","Average saccade velocity[deg/ms]","Peak saccade velocity[deg/ms]","Gaze velocity ms","Blink index","Blink duration[ms]","Blink marker","Left blink","Left openness","Left eyelid up","Left eyelid down","Right blink","Right openness","Right eyelid up","Right eyelid down","Gyroscope timestamp","Quat_data","Gyro","Accel","Mag","Aoi id","Aoi name","Aoi hit","Aoi enter time ms","Aoi exit time ms","Aoi dwell time ms","Aoi fixation count","Stimulus","Trigger mark","Custom marker","Mouse x","Mouse y","Udp send","Udp receive","Trigger send","Trigger receive"];
 let categoryInitializer, defaultSelectionEffect, selectAllHandler, groupedColumnsFunction;
 function findDefaults(node) {
   if (ts.isVariableDeclaration(node)) {
@@ -229,10 +229,10 @@ const categories = vm.runInNewContext(compile(`(${categoryInitializer.getText(as
 const allFields = categories.flatMap(category => category.fields);
 const availableColumns = allFields.map(field => field.key);
 const fieldByKey = Object.fromEntries(allFields.map(field => [field.key, field]));
-assert.deepEqual(Array.from(availableColumns), legacyFieldOrder, 'The actual selectable product fields are exactly the established 133 keys in order.');
+assert.deepEqual(Array.from(availableColumns), legacyFieldOrder, 'The actual selectable product fields are exactly the established 135 keys in order.');
 const standardManifest = load('shared/constants/eyeExportColumns.ts');
 assert.deepEqual(Array.from(standardManifest.EYE_EXPORT_STANDARD_KEYS), legacyFieldOrder, 'IPC allowlist and rendered product selection share the same standard field contract.');
-assert.equal(new Set(availableColumns).size, 133);
+assert.equal(new Set(availableColumns).size, 135);
 assert.ok(!fs.existsSync('src/features/export/domain/eyeExportMetadata.ts'), 'No unused extended export registry remains.');
 let selectedColumns = new Set();
 let includeSubjectAttributes = false;
@@ -242,14 +242,14 @@ const selectionScope = { availableColumns, subjectAttributeFieldKeys: [],
 };
 const selectionEffect = vm.runInNewContext(compile(`(${defaultSelectionEffect.getText(ast)})`), selectionScope);
 selectionEffect();
-assert.equal(selectedColumns.size, 133);
+assert.equal(selectedColumns.size, 135);
 assert.deepEqual(Array.from(selectedColumns), legacyFieldOrder, 'Default selection preserves all standard fields and their order.');
 selectedColumns = new Set(['source_model', 'gaze_velocity_normalized_ms', 'record_name']);
 selectionEffect();
 assert.deepEqual(Array.from(selectedColumns), ['record_name'], 'Stale extension selections are removed instead of remaining available.');
 const selectAll = vm.runInNewContext(compile(`(${selectAllHandler.getText(ast)})`), selectionScope);
 selectAll();
-assert.deepEqual(Array.from(selectedColumns), legacyFieldOrder, 'The actual Select All handler selects only the standard 133 fields.');
+assert.deepEqual(Array.from(selectedColumns), legacyFieldOrder, 'The actual Select All handler selects only the standard 135 fields.');
 assert.equal(includeSubjectAttributes, false);
 
 // Existing user-defined subject attributes remain a separate established capability.
@@ -266,7 +266,7 @@ assert.deepEqual(Array.from(selectedColumns), legacyFieldOrder, 'Subject fields 
 selectAll();
 assert.deepEqual(Array.from(selectedColumns), Array.from(withSubjectAttributes));
 assert.equal(includeSubjectAttributes, true, 'Select All still includes the established subject attributes when they exist.');
-assert.equal(selectedColumns.size, 134);
+assert.equal(selectedColumns.size, 136);
 selectionScope.availableColumns = availableColumns;
 selectionScope.subjectAttributeFieldKeys = [];
 
@@ -275,14 +275,18 @@ const columnSourceMap = Object.fromEntries(allFields.map(field => [field.key, fi
 const columnJoinSourceMap = Object.fromEntries(allFields.filter(field => field.joinSources?.length).map(field => [field.key, field.joinSources]));
 const columnHeaderMap = Object.fromEntries(allFields.map(field => [field.key,
   (field.header ?? field.key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_:]+/g, ' ').trim()).toLowerCase().replace(/[a-z]/, letter => letter.toUpperCase())]));
-assert.deepEqual(columns.map(key => columnHeaderMap[key]), legacyHeaders, 'All 133 existing headers remain unchanged.');
+assert.deepEqual(columns.map(key => columnHeaderMap[key]), legacyHeaders, 'All 135 existing headers remain unchanged.');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'eye-export-accuracy-'));
 const handlers = {};
 const csv = value => /[",\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+const et28Export = load('electron/domains/recording/recordEt28ExportEvents.ts', {
+  'node:fs': fs, 'node:readline': readline, './recordCsvParser': parser, '../../../shared/domain/eyeExportData': data,
+});
 try {
   load('electron/domains/recording/recordExportHandlers.ts', {
     electron: { ipcMain: { handle: (name, fn) => { handlers[name] = fn; } }, dialog: { showOpenDialog: async () => ({ filePaths: [root] }) } },
-    'node:fs': fs, 'node:readline': readline, 'node:path': path, './recordPointsModel': parser,
+    'node:fs': fs, 'node:path': path,
+    './recordEt28ExportEvents': et28Export,
     '../../../shared/domain/eyeExportData': data,
     './recordAoiExport': { AOI_EXPORT_KEYS: new Set(['aoi_id', 'aoi_name', 'aoi_hit', 'aoi_enter_time_ms', 'aoi_exit_time_ms', 'aoi_dwell_time_ms', 'aoi_fixation_count']), createRecordAoiExportDeriver: async (_path, context) => { assert.equal(context?.projectDir, undefined, 'This legacy fixture has no AOI context; full AOI IPC is covered separately.'); return undefined; } },
   '../../../shared/constants/eyeExportColumns': standardManifest,
@@ -310,9 +314,9 @@ try {
     assert.equal(result.ok, true);
     const output = fs.readFileSync(result.files[0], 'utf8').trim().replace(/^\uFEFF/, '').split('\n').map(line => parser.parseCsvLineFast(line).map(cell => cell.replace(/^\t/, '')));
     assert.deepEqual(JSON.parse(JSON.stringify(previewRows)), JSON.parse(JSON.stringify(output)), `${name}: actual preview and disk export must agree`);
-    assert.equal(output[0].length, 133, 'User CSV output has only the established standard columns.');
+    assert.equal(output[0].length, 135, 'User CSV output has only the established standard columns.');
     assert.deepEqual(Array.from(output[0]), legacyHeaders);
-    assert.equal(previewRows[0].length, 133, 'The actual preview exposes only the standard columns.');
+    assert.equal(previewRows[0].length, 135, 'The actual preview exposes only the standard columns.');
     const original = [fields.join(','), ...rows.map(row => row.map(csv).join(','))].join('\n');
     assert.equal(fs.readFileSync(source, 'utf8'), original, 'Standard export does not mutate archived measurements or internal provenance.');
     const rawOutput = original.split('\n').map(parser.parseCsvLineFast);
@@ -334,6 +338,39 @@ try {
     }
 
   }
+  const et28Source = path.join(root, 'et28-events-source.csv');
+  const et28Fields = [...fields, 'left_et28_device_timestamp', 'et28_gaze_events',
+    'world_image_width', 'world_image_height', 'fixation_index', 'fixation_timestamp_ms', 'fixation_duration_ms',
+    'source_event_id', 'source_event_duration_ms', 'saccade_index', 'saccade_duration_ms',
+    'saccade_distance_px', 'average_saccade_velocity_px_ms'];
+  const fixation = (start, end, x) => ({ valid: true, start: { timeStamp: start }, end: { timeStamp: end }, centroid: [x, 100] });
+  const et28Row = (time, events = {}) => et28Fields.map(key => csv(String({
+    source_model: 'HH_ET28', source_generation: 1, video_time_ms: time, left_et28_device_timestamp: 10000 + time,
+    recom_gaze_x: 0.25, recom_gaze_y: 0.5, recom_gaze_bit_mask: 1, world_image_width: 1920, world_image_height: 1080,
+    et28_gaze_events: JSON.stringify(events),
+  }[key] ?? ''))).join(',');
+  const et28Original = [et28Fields.join(','), et28Row(10),
+    et28Row(500, { fixation: fixation(10020, 10100, 100) }),
+    et28Row(530, { saccade: { valid: true, start: { timeStamp: 10100 }, end: { timeStamp: 10130 }, meanVelocity: 5000, amplitude: 150 } }),
+    et28Row(620, { fixation: fixation(10130, 10220, 200) }),
+    et28Row(630, { fixation: fixation(10130, 10220, 200) })].join('\n');
+  fs.writeFileSync(et28Source, et28Original);
+  const et28Result = await handlers['export-records-csv']({}, {
+    records: [{ name: 'et28-events', csvPath: et28Source }], columns, columnSourceMap, columnJoinSourceMap, headerMap: columnHeaderMap,
+  });
+  assert.equal(et28Result.ok, true);
+  const et28Rows = fs.readFileSync(et28Result.files[0], 'utf8').trim().split('\n').slice(1).map(parser.parseCsvLineFast);
+  const value = (row, key) => row[columns.indexOf(key)].trim();
+  assert.equal(value(et28Rows[0], 'recom_gaze_point_x'), '0.25');
+  assert.equal(value(et28Rows[0], 'recom_gaze_point_z'), '');
+  assert.equal(value(et28Rows[0], 'recom_gaze_bit_mask'), '1');
+  assert.deepEqual(et28Rows.filter(row => value(row, 'fixation_count')).map(row => value(row, 'fixation_timestamp')), ['20', '130']);
+  const sweep = et28Rows.find(row => value(row, 'saccade_index'));
+  assert.equal(value(sweep, 'saccade_duration_ms'), '30');
+  assert.equal(value(sweep, 'saccade_amplitude_px'), '100');
+  assert.equal(value(sweep, 'average_saccade_velocity_px_ms'), '5');
+  assert.equal(fs.readFileSync(et28Source, 'utf8'), et28Original);
+
   const timeSource = path.join(root, 'time-source.csv');
   fs.writeFileSync(timeSource, 'video_time_ms,timestamp,source_model,fixation_center_x\n,,PupilCore,0.5\n0,0,PupilCore,0\n');
   const timeResult = await handlers['export-records-csv']({}, { records: [{ name: 'time-export', csvPath: timeSource }],
@@ -360,4 +397,4 @@ try {
   const legacyTimeRows = fs.readFileSync(legacyTimeResult.files[0], 'utf8').trimEnd().replace(/^\uFEFF/, '').split('\n').map(parser.parseCsvLineFast);
   assert.equal(legacyTimeRows[1][0], '\t' + legacyClock, 'Actual IPC export preserves a legacy device civil time.');
 } finally { fs.rmSync(root, { recursive: true, force: true }); }
-console.log('Eye export accuracy passed: real preview/export parity, missing/zero metadata, precise Hz, source/civil time, exactly 133 standard fields, unchanged headers, default/select-all, subject attributes, units, gaps, events, native/Capture blinks, 7invensun and Huahong compatibility.');
+console.log('Eye export accuracy passed: real preview/export parity, missing/zero metadata, precise Hz, source/civil time, exactly 135 standard fields, unchanged headers, default/select-all, subject attributes, units, gaps, events, native/Capture blinks, 7invensun and Huahong compatibility.');

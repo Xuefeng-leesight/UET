@@ -87,6 +87,7 @@ if (input.calibrationQuality) {
   const { mapLoadedRecordings } = load('src/features/records/domain/recordingsMapping.ts', {
     '@shared/domain/timeline': load('shared/domain/timeline.ts'),
     '@shared/domain/calibrationScores': calibration,
+    '@shared/domain/modalityAvailability': load('shared/domain/modalityAvailability.ts'),
   });
   const [mapped] = mapLoadedRecordings(JSON.parse(JSON.stringify([record])));
   assert.equal(mapped.calibrationScores.left, input.calibrationLeftScore);

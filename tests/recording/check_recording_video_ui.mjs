@@ -64,11 +64,19 @@ const executeMemo = (ast, name, globals) => evaluate(memo(ast, name), globals)()
 const json = (value) => JSON.parse(JSON.stringify(value));
 const noop = () => {};
 const { resolveRecordingVideoStimulus } = load('shared/domain/recordingStimulus.ts');
+let panelLanguage = 'zh-CN';
 const panelDependencies = {
   'lucide-react': icons,
   '@/shared/ui/buttonClasses': load('src/shared/ui/buttonClasses.ts'),
   '@/shared/ui/CustomSelect': ({ children, value, disabled }) =>
     React.createElement('select', { value, disabled, onChange: noop }, children),
+  // The shared switch drives a glass controller in the browser; a plain checkbox is
+  // enough to render the panels' markup here.
+  '@/shared/ui/Switch': { __esModule: true, default: ({ checked, disabled }) =>
+    React.createElement('input', { type: 'checkbox', role: 'switch', checked: !!checked, disabled, onChange: noop }) },
+  // The panels read the language from the shared hook; the loop below switches it.
+  '@/app/i18n/useLanguage': { useLanguage: () => ({ language: panelLanguage, setLanguage: noop }) },
+  '@/app/i18n/useDomTranslation': { localizeText: (language, text, english) => (language === 'en-US' ? english ?? text : text) },
 };
 const panels = {
   aoi: load('src/features/analysis/aoi/AoiBasicSettingsPanel.tsx', panelDependencies).AoiBasicSettingsPanel,
@@ -84,6 +92,7 @@ const panelProps = {
 };
 for (const [kind, Panel] of Object.entries(panels)) {
   for (const isEn of [false, true]) {
+    panelLanguage = isEn ? 'en-US' : 'zh-CN';
     const render = (overrides = {}) => renderToStaticMarkup(React.createElement(Panel, {
       ...panelProps, isGlassesMode: true, isEn, ...overrides,
     }));
@@ -116,6 +125,7 @@ const RealVisualPanel = load('src/features/analysis/visual/VisualSettingsPanel.t
   ...panelDependencies, '@/shared/ui/CustomSelect': CustomSelect,
 }).VisualSettingsPanel;
 for (const isEn of [false, true]) {
+  panelLanguage = isEn ? 'en-US' : 'zh-CN';
   for (const recordingVideoName of [undefined, panelProps.recordingVideoName]) {
     const markup = renderToStaticMarkup(React.createElement(RealVisualPanel, {
       ...panelProps, isEn, recordingVideoName, isGlassesMode: true,

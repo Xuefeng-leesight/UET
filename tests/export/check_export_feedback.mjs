@@ -162,6 +162,7 @@ function pageHarness(overrides = {}) {
     resolveRecordExportName: (record) => record.name, buildSubjectInfoForRecord: () => ({ age: '23' }), buildRecordMetadataValues: () => ({ record_name: 'A' }),
     availableColumns: ['a', 'b'], selectedColumns: new Set(['b']), columnHeaderMap: { b: 'B' }, columnSourceMap: { b: ['legacy_b'] }, columnJoinSourceMap: {},
     selectedFacialArtifacts: new Set(['video']), runEyeTrackingExport, runFacialExport, describeExportOutcome,
+    exportGazeFrame: (record) => (record.exportCsvPath ? 'top-left-normalized' : undefined),
     setFeedback: (value) => notices.push(value), setExporting: (value) => busy.push(value),
     setPreviewRecord: (value) => previews.push(['record', value]), setPreviewData: (value) => previews.push(['data', value]),
     setPreviewLoading: (value) => previews.push(['loading', value]), setPreviewError: (value) => previews.push(['error', value]),

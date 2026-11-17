@@ -165,7 +165,7 @@ class CommunicationRecordingTests(unittest.TestCase):
             self.assertEqual(result['status'], 'complete', result)
             self.assertEqual(result['communicationEvents'], 4)
             self.assertEqual(result['gazeRows'], 1, 'Communication rows never inflate gaze validity/rate')
-            with recorder.csv_path.open(newline='') as handle:
+            with recorder.internal_csv_path.open(newline='') as handle:
                 rows = list(csv.DictReader(handle))
             events = [row for row in rows if row['source_event_type'] == 'communication']
             self.assertEqual(len(events), 4)
@@ -246,7 +246,7 @@ class CommunicationRecordingTests(unittest.TestCase):
                 handle.write('{"torn":')
             self.assertEqual(recover_directory(temp), [{'recording_id': 'communications', 'status': 'partial'}])
             self.assertEqual((recorder.sidecar / 'interrupted.csv').read_bytes(), original_csv)
-            with recorder.csv_path.open(newline='') as handle:
+            with recorder.internal_csv_path.open(newline='') as handle:
                 rows = list(csv.DictReader(handle))
             self.assertEqual([row['udp_receive'] for row in rows if row['udp_receive']], [envelope('persistent message')])
             metadata = json.loads(recorder.meta_path.read_text())
@@ -301,7 +301,7 @@ class CommunicationRecordingTests(unittest.TestCase):
             finally:
                 result = recorder.finish()
             self.assertEqual(result['status'], 'complete', result)
-            with recorder.csv_path.open(newline='') as handle:
+            with recorder.internal_csv_path.open(newline='') as handle:
                 rows = list(csv.DictReader(handle))
             self.assertEqual(rows[0]['gaze_velocity_px_ms'], '')
             self.assertAlmostEqual(float(rows[1]['gaze_velocity_px_ms']), .4)
@@ -345,7 +345,7 @@ class CommunicationWebSocketTests(unittest.IsolatedAsyncioTestCase):
                 result = recorder.finish()
             self.assertEqual(result['status'], 'complete', result)
             self.assertEqual(result['communicationEvents'], 1)
-            with recorder.csv_path.open(newline='') as handle:
+            with recorder.internal_csv_path.open(newline='') as handle:
                 row = next(csv.DictReader(handle))
             self.assertEqual(json.loads(row['udp_receive'])['data'], '\0' * 65507)
 

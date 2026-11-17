@@ -99,7 +99,8 @@ class TimelineTests(unittest.TestCase):
             result = recorder.finish()
             self.assertEqual(result["status"], "failed")
             self.assertFalse(result["videoVerified"])
-            self.assertTrue((Path(temp) / "broken.pupil" / "diagnostics.json").exists())
+            # The working folder now lives in the recording workspace, not beside the video.
+            self.assertTrue((recorder.sidecar / "diagnostics.json").exists())
 
     def test_missing_recording_dependency_fails_before_reserving_files(self):
         real_import = builtins.__import__
@@ -149,7 +150,7 @@ class TimelineTests(unittest.TestCase):
             self.assertFalse(recorder._thread.is_alive())
             self.assertTrue(recorder._lease.handle.closed)
             self.assertFalse(recorder.video_path.exists())
-            diagnostic = json.loads((recorder.sidecar / "diagnostics.json").read_text())
+            diagnostic = json.loads((recorder.sidecar / "diagnostics.json").read_text(encoding="utf-8"))
             self.assertEqual(diagnostic["error"], result["error"])
             encoder.assert_not_called()
             unhandled.assert_not_called()
@@ -187,7 +188,7 @@ class MediaRecordingTests(unittest.TestCase):
             self.assertEqual(result["gazeRows"], 3)
             self.assertEqual(result["gazeOutsideVideo"], 2)
             self.assertAlmostEqual(result["durationSeconds"], 0.4)
-            with recorder.csv_path.open(newline="", encoding="utf-8") as handle:
+            with recorder.internal_csv_path.open(newline="", encoding="utf-8") as handle:
                 rows = list(csv.DictReader(handle))
             self.assertEqual(len(rows), 3)
             self.assertAlmostEqual(float(rows[1]["video_time_ms"]), 100)
@@ -233,7 +234,7 @@ class MediaRecordingTests(unittest.TestCase):
                 manifest = json.loads((recorder.sidecar / "recovery.json").read_text())
                 self.assertEqual(manifest["name"], name)
                 self.assertEqual(manifest["deviceModel"], model)
-                with recorder.csv_path.open(newline="", encoding="utf-8") as handle:
+                with recorder.internal_csv_path.open(newline="", encoding="utf-8") as handle:
                     rows = list(csv.DictReader(handle))
                 gaze_rows = [row for row in rows if row["pupil_valid"]]
                 self.assertEqual(len(gaze_rows), 2)
@@ -264,7 +265,7 @@ class MediaRecordingTests(unittest.TestCase):
             result = recorder.finish()
             self.assertEqual(result["status"], "complete", result)
             self.assertEqual(result["deviceType"], "桌面式")
-            with recorder.csv_path.open(newline="", encoding="utf-8") as handle:
+            with recorder.internal_csv_path.open(newline="", encoding="utf-8") as handle:
                 rows = list(csv.DictReader(handle))
             self.assertEqual([row["stimulus"] for row in rows], ["first material", "second material"])
             context = json.loads((recorder.sidecar / "context.json").read_text())

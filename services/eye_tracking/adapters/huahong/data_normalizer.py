@@ -2,7 +2,7 @@
 from dataclasses import replace
 import json
 import math
-from ...infrastructure.pupil_csv import gaze_csv_row as pupil_row
+from ...infrastructure.pupil_csv import gaze_csv_row as pupil_row, vector_columns
 from ...transport.pupil_protocol import image_message as encode_image
 
 
@@ -25,6 +25,44 @@ def _et28_pupil_center(sample, eye):
                         for value in point.values()) else None
 
 
+def _et28_csv_fields(row, sample):
+    row['pupil_model_quality_policy'] = ''
+    row['pupil_valid'] = int(any(pupil.valid for pupil in sample.pupils))
+    for pupil in sample.pupils:
+        eye = pupil.eye
+        row[f'{eye}_pupil_bit_mask'] = (
+            int(pupil.center_normalized is not None)
+            | (int(pupil.diameter_px is not None) << 2)
+            | (int(pupil.diameter_mm is not None) << 3)
+            | (int(pupil.minor_axis_px is not None) << 4)
+        )
+        vendor = sample.monocular[eye]['vendor']
+        blink = vendor['blink']
+        openness = blink['eyelidOpenDegree']
+        if 0 <= openness <= 100:
+            row[f'{eye}_openness'] = openness
+        row[f'{eye}_et28_device_timestamp'] = vendor['deviceTimestamp']
+        for column, data in (
+            ('pupil_3d', vendor['pupil3d'] if vendor['pupil3d']['valid3d'] else None),
+            ('eyelid_contour', vendor['eyelid']['contour'] if vendor['eyelid'] else None),
+            ('blink_event', blink if blink['blinkDetected'] else None),
+        ):
+            if data is not None:
+                row[f'{eye}_et28_{column}'] = json.dumps(data, separators=(',', ':'))
+        if vendor['haveGazeInfo']:
+            for name, field in (('origin', 'corneaCenter'), ('direction', 'direction')):
+                vector = tuple(vendor['sightLine'][field][axis] for axis in 'xyz')
+                if None not in vector and any(vector):
+                    vector_columns(row, f'{eye}_{name}', vector)
+                    row['geometry_space'] = 'vendor_et28'
+    merge = sample.vendor['mergeGaze']
+    if merge['valid']:
+        row['et28_merged_gaze'] = json.dumps(merge, separators=(',', ':'))
+    events = sample.vendor['gazeEvent']
+    if events:
+        row['et28_gaze_events'] = json.dumps(events, separators=(',', ':'))
+
+
 def gaze_csv_row(sample, t0_s, pupils=None):
     if sample.coordinate_space not in ('world_normalized_top_left', 'screen_normalized_top_left'):
         raise ValueError('Unverified Huahong coordinate space')
@@ -35,8 +73,13 @@ def gaze_csv_row(sample, t0_s, pupils=None):
     # The Pupil mapper needs a temporary bottom-left coordinate to produce the
     # existing MRT aliases. Source fields must still describe the actual input.
     row['source_norm_pos_x'], row['source_norm_pos_y'] = sample.position or ('', '')
-    row['pupil_valid'] = ''  # Gaze availability does not establish pupil validity.
-    row['pupil_center_space'] = ''  # ET28 eyeInfo units are not documented.
+    row['source_coordinate_space'] = sample.coordinate_space
+    row['gaze_coordinate_space'] = sample.coordinate_space
+    if sample.identity.source == 'HH_ET28' and sample.vendor:
+        _et28_csv_fields(row, sample)
+    else:
+        row['pupil_valid'] = ''
+        row['pupil_center_space'] = ''
     row['recom_gaze_bit_mask'] = 1 if sample.valid and sample.position is not None else 0
     # These export columns denote physical 3D points. Huahong only establishes
     # normalized 2D gaze here, with no separate raw or smoothed measurement.

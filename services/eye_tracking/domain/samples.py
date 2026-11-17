@@ -41,6 +41,7 @@ class GazeSample:
     rejected_eye_ids: tuple[int, ...] = ()
     source_order: str = ""
     world_resolution_epoch: int = 0  # Changes when validated scene dimensions change.
+    vendor: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

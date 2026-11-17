@@ -96,15 +96,15 @@ class ControlledService:
         if self.tracking_started:
             self.last_gaze = time.monotonic()
             identity = SampleIdentity(self.capabilities.model, 'gaze', self.generation, 1,
-                                      self.last_gaze, self.last_gaze)
+                                      time.perf_counter(), self.last_gaze)
             space = ('world_normalized_top_left' if self.capabilities.model == 'HH_ET28'
                      else 'screen_normalized_top_left')
             samples.append(GazeSample(identity, (.5, .5), space, None, True, ('left',)))
         return samples
 
     def frame(self):
-        now = time.monotonic()
-        identity = SampleIdentity(self.capabilities.model, 'scene', self.generation, 1, now, now)
+        identity = SampleIdentity(self.capabilities.model, 'scene', self.generation, 1,
+                                  time.perf_counter(), time.monotonic())
         return VideoFrame(identity, 'scene', 4, 2, 'bgr', bytes(24), None)
 
     def close(self):
@@ -613,8 +613,7 @@ class CalibrationRuntimeTests(unittest.TestCase):
         self.assertEqual(runtime.token, completed['coe'])
 
     def test_completion_failures_echo_session_even_after_invalidation(self):
-        for failure in ('empty_feature', 'feature_exception', 'quality_count', 'quality_bad_point',
-                        'missing_quality', 'tracking_exception'):
+        for failure in ('empty_feature', 'feature_exception', 'tracking_exception'):
             with self.subTest(failure=failure):
                 runtime, service = self.make_runtime()
                 session = 'failed-' + failure
@@ -625,12 +624,6 @@ class CalibrationRuntimeTests(unittest.TestCase):
                     service.feature_value = b''
                 elif failure == 'feature_exception':
                     service.feature_error = RuntimeError('Native feature retrieval failed')
-                elif failure.startswith('quality_'):
-                    detail = ('left count=2 expected=3' if failure == 'quality_count'
-                              else 'right bad points=2(status=2)')
-                    service.feature_error = RuntimeError('ET28 calibration quality failed: ' + detail)
-                elif failure == 'missing_quality':
-                    service.publish_quality = False
                 else:
                     service.tracking_error = RuntimeError('Native tracking failed')
                 generation = runtime.calibration_generation
@@ -641,9 +634,17 @@ class CalibrationRuntimeTests(unittest.TestCase):
                 self.assertIsNone(runtime.calibration_session)
                 self.assert_invalidated(runtime, generation)
                 self.assertNotEqual(self.command(runtime, 'start_recording')['error'], 0)
-                if failure.startswith('quality_'):
-                    self.assertIn(detail, response['msg'])
-                    self.assertEqual(service.tracking_calls, 0)
+
+    def test_missing_quality_does_not_block_et28_completion(self):
+        runtime, service = self.make_runtime()
+        self.ok(runtime, 'start_calibration', points=3)
+        for index in range(1, 4):
+            self.finish_point(runtime, service, index, index)
+        service.publish_quality = False
+        result = self.ok(runtime, 'complete_calibration')
+        self.assertTrue(runtime.verified)
+        self.assertEqual(result['tracking_error'], 0)
+        self.assertNotIn('calibration_quality', result)
 
 
 if __name__ == '__main__':

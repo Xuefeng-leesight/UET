@@ -196,8 +196,10 @@ class PupilRuntime:
                 self.last_error = ""
             return {"model": "PupilCore", "acquisition_ready": True}
         if command == "stop":
-            if self.recorder or self.finalizer:
-                raise RuntimeError("Stop and finalize recording before stopping acquisition")
+            # Saving only needs the recorder's own files, so the device may stop
+            # while it finalizes; reconnecting still waits for the save to finish.
+            if self.recorder:
+                raise RuntimeError("Stop recording before stopping acquisition")
             self.service.calibration.cancel()
             self.service.close()
             self._resolve_start('Device start canceled')
@@ -208,11 +210,18 @@ class PupilRuntime:
         if command in ("start_tracking", "stop_tracking"):
             if command == "start_tracking" and self.service.state != "ready":
                 raise RuntimeError("Acquisition is not ready")
+            reused = False
             if command == "start_tracking" and (not self.service.calibration.verified or
                                                 args.get("coe") != self.service.calibration.token):
-                raise ValueError("请在本软件完成本次 Pupil 校准；历史校准不能跨连接复用")
+                # A mapping saved earlier for this subject and headset (native backend).
+                if self.recorder or self.finalizer:
+                    raise RuntimeError("Stop and finalize recording before reusing a calibration")
+                self.tracking = False
+                self.service.calibration.restore(args.get("coe"))
+                reused = True
             self.tracking = command == "start_tracking"
-            return {"calibration_verified": self.service.calibration.verified}
+            return {"calibration_verified": self.service.calibration.verified,
+                    **({"calibration_reused": True} if reused else {})}
         if command == "start_calibration":
             if self.service.state != "ready" or self.recorder or self.finalizer:
                 raise RuntimeError("Connect the camera and stop recording before calibration")
@@ -321,6 +330,8 @@ class PupilRuntime:
                                      metadata={"subjectName": subject, "deviceType": "眼镜式",
                                                "calibrationVerified": True, "calibrationProvider": "PupilCore",
                                                "calibrationMode": "natural_feature", "independentValidationPerformed": audit["independentValidationPerformed"],
+                                               **({"calibrationReused": True, "reusedCalibratedAt": audit.get("reusedCalibratedAt")}
+                                                  if audit.get("mode") == "reused_saved_calibration" else {}),
                                                "calibrationTrainingAngular": (audit.get("result") or {}).get("params", {}).get("training_angular"),
                                                "calibrationValidation": audit.get("validation"),
                                                "videoSource": "world", "splitScreen": bool(args.get("split_screen"))})

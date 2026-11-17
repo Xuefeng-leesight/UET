@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 const base = path.resolve('SDK/huahong');
 const manifest = JSON.parse(fs.readFileSync(path.join(base, 'INTEGRATION_MANIFEST.json'), 'utf8'));
 for (const directory of Object.values(manifest.models)) {
-  if (!/^et(?:10|28)\/bin\/windows\/x64$/.test(directory)) throw new Error(`Unexpected Huahong runtime layout: ${directory}`);
+  if (!/^et(?:10|28-aiot)\/bin\/windows\/x64$/.test(directory)) throw new Error(`Unexpected Huahong runtime layout: ${directory}`);
   const expected = manifest.runtime.filter(item => path.posix.dirname(item.path) === directory).map(item => path.posix.basename(item.path)).sort();
   const actual = fs.readdirSync(path.join(base, directory)).sort();
   if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`Huahong runtime contents differ from manifest: ${directory}`);

@@ -2,7 +2,7 @@
   "version": 2,
   "models": {
     "HH_ET10C": "et10/bin/windows/x64",
-    "HH_ET28": "et28/bin/windows/x64"
+    "HH_ET28": "et28-aiot/bin/windows/x64"
   },
   "runtime": [
     {
@@ -126,73 +126,79 @@
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/ET20gTracker.dll",
-      "bytes": 17795072,
-      "sha256": "2a9cfe911ad0188d4ef6e18bb7b7396817e0cafbb74792ac78cafa523eaf86af",
+      "path": "et28-aiot/bin/windows/x64/AiotGlassEyeTracker.dll",
+      "bytes": 22313472,
+      "sha256": "656b9580f620451ebfa5131cef1a42fbf9687046125f0f509450c717035ab98f",
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/concrt140.dll",
-      "bytes": 322560,
-      "sha256": "4f500992a53c41a0ba44a11c33c481d8763505a7453be12d85107856ab8fb332",
+      "path": "et28-aiot/bin/windows/x64/AiotGlassEyeTrackerInterface.dll",
+      "bytes": 211456,
+      "sha256": "e5e19c5c582ca45f963dd2aac130fafe88e11a1a9e601be40fe15593b7f11eb8",
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/et28_interface.dll",
-      "bytes": 199168,
-      "sha256": "66b8f9822a6c849ddd5edd2ba155d5b6605597bbc5d90ca70e1bd9869ae3b1e5",
+      "path": "et28-aiot/bin/windows/x64/circleDetect.dll",
+      "bytes": 31744,
+      "sha256": "8de4a208e55924f38dd1875805847effc8be65f8fffe57e4f732b7052250fe11",
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/libusb-1.0.dll",
+      "path": "et28-aiot/bin/windows/x64/concrt140.dll",
+      "bytes": 324208,
+      "sha256": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "status": "required_keep"
+    },
+    {
+      "path": "et28-aiot/bin/windows/x64/libusb-1.0.dll",
       "bytes": 173056,
       "sha256": "82031a6198fad16223674300a32b57e04ef62931ad0d2c50af471f78788d1cbb",
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/msvcp140.dll",
+      "path": "et28-aiot/bin/windows/x64/msvcp140.dll",
       "bytes": 575056,
       "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/ncnn.dll",
+      "path": "et28-aiot/bin/windows/x64/ncnn.dll",
       "bytes": 4925952,
       "sha256": "1f68ba61049e06afe748ae35bbb4483681cf5b42171b478835a73158929b8000",
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/opencv_world455.dll",
+      "path": "et28-aiot/bin/windows/x64/opencv_world455.dll",
       "bytes": 74661376,
       "sha256": "f134afc9ebc68a1812b9abb25ef0cc0e1b001c03d2ec974362fafcbe384eac4d",
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/pthreadVC2.dll",
+      "path": "et28-aiot/bin/windows/x64/pthreadVC2.dll",
       "bytes": 82944,
       "sha256": "0e6af724609ef6846982ef717013426c359c455fff324e906d8d55c8bb88d16e",
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/uniformLibUvc.dll",
+      "path": "et28-aiot/bin/windows/x64/uniformLibUvc.dll",
       "bytes": 238080,
-      "sha256": "348b34ead3291e93611f8c27350aef7cc40ec64863c07d105da7c597147d2731",
+      "sha256": "94330702afd1b24e32176a9d213fdf73468d36f6cd1bbc2c1d312b69e6ac690a",
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/vcruntime140.dll",
+      "path": "et28-aiot/bin/windows/x64/vcruntime140.dll",
       "bytes": 119888,
       "sha256": "02c6aa0e6e624411a9f19b0360a7865ab15908e26024510e5c38a9c08362c35a",
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/vcruntime140_1.dll",
+      "path": "et28-aiot/bin/windows/x64/vcruntime140_1.dll",
       "bytes": 49640,
       "sha256": "7dd9aa02e271c68ca6d5f18d651d23a15d7259715af43326578f7dde27f37637",
       "status": "required_keep"
     },
     {
-      "path": "et28/bin/windows/x64/vulkan-1.dll",
+      "path": "et28-aiot/bin/windows/x64/vulkan-1.dll",
       "bytes": 1095280,
       "sha256": "f24d07b13e8593a85b6d51b7debb115ca994e34feab8aef2821b7ca616043185",
       "status": "required_keep"
@@ -216,5 +222,5 @@
     "**/cablic.dat",
     "**/selfcheck_report.txt"
   ],
-  "note": "Runtime binaries preserved byte-for-byte; samples are development references excluded from installers. Generated logs, caches and sample calibration data removed. Windows hardware acceptance pending."
+  "note": "Runtime binaries preserved byte-for-byte. ET28 uses aiotGlass from the 2026-11-11 vendor package. Legacy samples are development references and excluded from installers. Windows hardware acceptance pending."
 }

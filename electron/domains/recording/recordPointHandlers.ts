@@ -3,6 +3,7 @@ import * as fs from 'node:fs'
 import * as readline from 'node:readline'
 import { computeAoiStatsRows } from '../../../shared/domain/aoi/aoiReport'
 import { createRecordAoiExportDeriver } from './recordAoiExport'
+import { readEt28ExportEvents, readRecordExportRows } from './recordEt28ExportEvents'
 import {
   DEFAULT_MAX_RECORD_POINTS,
   buildRecordPointsIndex,
@@ -37,27 +38,23 @@ export function registerRecordPointHandlers(): void {
     }
     try {
       const stat = await fs.promises.stat(csvPath)
-      const rs = fs.createReadStream(csvPath, { encoding: 'utf-8' })
-      const rl = readline.createInterface({ input: rs, crlfDelay: Infinity })
+      const sdkEvents = await readEt28ExportEvents(csvPath)
       let headers: string[] = []
       const rows: string[][] = []
       let seenHeader = false
       let truncated = false
-      for await (const line of rl) {
+      for await (const parts of readRecordExportRows(csvPath, sdkEvents)) {
         if (!seenHeader) {
-          headers = parseCsvLineFast(line).map((h) => String(h || '').replace(/^\uFEFF/, '').trim())
+          headers = parts
           seenHeader = true
           continue
         }
-        if (!line) continue
         if (rows.length >= maxRows) {
           truncated = true
           break
         }
-        rows.push(parseCsvLineFast(line).map((cell) => cell.trim()))
+        rows.push(parts.map((cell) => cell.trim()))
       }
-      rl.close()
-      rs.close()
       const deriveAoi = await createRecordAoiExportDeriver(csvPath, payload.aoiContext)
       return { ok: true, headers, rows, fileSizeBytes: stat.size, truncated,
         ...(deriveAoi ? { derivedAoiRows: rows.map(deriveAoi) } : {}) }

@@ -100,6 +100,7 @@ export const recordsIpcClient = {
       csvPath: string;
       projectDir?: string;
       deviceType?: string;
+      gazeFrame?: 'top-left-normalized';
       subjectName?: string;
       subjectInfo?: Record<string, string>;
       metadataValues?: Record<string, string>;
@@ -127,7 +128,8 @@ export const recordsIpcClient = {
     return invokeSafe<SaveCalibrationResultResult>('save-calibration-result', payload, { ok: false });
   },
 
-  loadCalibrationResult: async (payload: { experimentDir: string; subjectId?: string }): Promise<LoadCalibrationResultResult> => {
+  /** With deviceModel, only that device's calibration for the subject is returned. */
+  loadCalibrationResult: async (payload: { experimentDir: string; subjectId?: string; deviceModel?: string }): Promise<LoadCalibrationResultResult> => {
     return invokeSafe<LoadCalibrationResultResult>('load-calibration-result', payload, { ok: false, result: null });
   }
 };

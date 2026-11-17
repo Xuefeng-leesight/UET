@@ -51,6 +51,7 @@ const profiles = load('src/features/recording/device/deviceProfile.ts');
 const mapping = load('src/features/records/domain/recordingsMapping.ts', {
   '@shared/domain/timeline': load('shared/domain/timeline.ts'),
   '@shared/domain/calibrationScores': load('shared/domain/calibrationScores.ts'),
+  '@shared/domain/modalityAvailability': load('shared/domain/modalityAvailability.ts'),
 });
 const recordModalities = load('shared/domain/recordModalities.ts');
 const rendererLoader = load('src/features/records/domain/recordingsLoader.ts', {
@@ -127,7 +128,7 @@ try {
 
   // The previous scanner could cache an empty list for these exact same files.
   const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
-  assert.equal(summary.version, 10);
+  assert.equal(summary.version, 12);
   for (const version of [7, 8]) {
     fs.writeFileSync(summaryPath, JSON.stringify({ ...summary, version, records: [] }));
     const afterUpgrade = await read();

@@ -98,8 +98,13 @@ const MountainChart = forwardRef<MountainChartHandle, Props>(
     const videoTextureRef = useRef<THREE.VideoTexture | null>(null);
     const imageTextureRef = useRef<THREE.Texture | null>(null);
     const animFrameRef = useRef<number>(0);
-    const densityGridRef = useRef<Float32Array | null>(null);
-    const lastPointsHashRef = useRef<string>('');
+    const densityCacheRef = useRef<{
+      points: HeatmapPoint[];
+      pointCount: number;
+      resolution: number;
+      smoothing: number;
+      grid: Float32Array;
+    } | null>(null);
 
     const planeW = videoSize && videoSize.w > 0 ? videoSize.w : 640;
     const planeH = videoSize && videoSize.h > 0 ? videoSize.h : 360;
@@ -302,16 +307,23 @@ const MountainChart = forwardRef<MountainChartHandle, Props>(
         ? points.filter((p) => (p.timestamp || 0) <= currentTime)
         : [];
 
-      const pointsHash = `${activePoints.length}_${currentTime.toFixed(2)}_${settings.gridResolution}_${settings.peakSmoothing}`;
-      const needRebuild = pointsHash !== lastPointsHashRef.current;
-
-      if (needRebuild) {
-        lastPointsHashRef.current = pointsHash;
-        densityGridRef.current = computeDensityGrid(activePoints, settings.gridResolution, settings.peakSmoothing);
+      const { gridResolution: res, peakSmoothing } = settings;
+      let cachedDensity = densityCacheRef.current;
+      if (
+        !cachedDensity || cachedDensity.points !== points || cachedDensity.pointCount !== activePoints.length
+        || cachedDensity.resolution !== res || cachedDensity.smoothing !== peakSmoothing
+      ) {
+        cachedDensity = {
+          points,
+          pointCount: activePoints.length,
+          resolution: res,
+          smoothing: peakSmoothing,
+          grid: computeDensityGrid(activePoints, res, peakSmoothing),
+        };
+        densityCacheRef.current = cachedDensity;
       }
 
-      const densityGrid = densityGridRef.current || new Float32Array(settings.gridResolution * settings.gridResolution);
-      const res = settings.gridResolution;
+      const densityGrid = cachedDensity.grid;
 
       mountainMesh.geometry.dispose();
 

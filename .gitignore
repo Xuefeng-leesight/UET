@@ -50,3 +50,17 @@ target-detector
 /pupil/
 /pupil-derived/
 /et28/
+
+# 不提交到仓库（本机保留）
+/deliverables/
+/docs/debug/
+/docs/code-graph/
+/docs/对接/
+/docs/接口/
+/docs/部署/
+/docs/审查/
+/docs/方案/License管理与版本更新后台方案.md
+/docs/方案/PupilCore接入方案.md
+/docs/方案/华弘SDK接入方案.md
+/docs/方案/表情分析开发指南.md
+/metadata.json

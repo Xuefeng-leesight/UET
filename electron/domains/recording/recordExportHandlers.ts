@@ -1,8 +1,7 @@
 import { dialog, ipcMain } from 'electron'
 import * as fs from 'node:fs'
-import * as readline from 'node:readline'
 import path from 'node:path'
-import { parseCsvLineFast } from './recordPointsModel'
+import { readEt28ExportEvents, readRecordExportRows } from './recordEt28ExportEvents'
 import { isStandardEyeExportKey } from '../../../shared/constants/eyeExportColumns'
 import { AOI_EXPORT_KEYS, createRecordAoiExportDeriver } from './recordAoiExport'
 import { createExportMotionDeriver, createExportSmoothingDeriver, createExportSegmentScanner, createExportSegmentReader, finiteCsvNumber, buildNumericExportMetadata, formatExportVideoTime, resolveExportTimeOfDay, resolveExportMeasurement, type ExportSegments } from '../../../shared/domain/eyeExportData'
@@ -39,6 +38,7 @@ export function registerRecordExportHandlers(_dependencies: RecordExportDependen
           aoiDerivers.set(record, await createRecordAoiExportDeriver(record.csvPath, {
             projectDir: record.projectDir, recordId: record.id, deviceType: record.deviceType,
             videoWidth: record.videoWidth, videoHeight: record.videoHeight, coordinateSpace: 'original-video',
+            gazeFrame: record.gazeFrame,
           }))
         }
       } catch (error) {
@@ -65,10 +65,6 @@ export function registerRecordExportHandlers(_dependencies: RecordExportDependen
       return cleaned.length > 0 ? cleaned : 'export'
     }
   
-    const parseHeader = (headerLine: string) =>
-      parseCsvLineFast(headerLine)
-        .map((h) => h.trim())
-  
     const normalizeHeader = (v: unknown): string => String(v || '').trim().toLowerCase()
     const getColumnSources = (key: string): string[] => {
       const sources = (columnSourceMap as Record<string, unknown>)[key]
@@ -92,23 +88,16 @@ export function registerRecordExportHandlers(_dependencies: RecordExportDependen
       // Prefix a tab so spreadsheet apps keep the exact textual value and do not coerce time/timestamp cells.
       return `\t${s}`
     }
-    const scanDerivedExportSegments = async (csvPath: string): Promise<ExportSegments> => {
-      const rs = fs.createReadStream(csvPath, { encoding: 'utf-8' })
-      const rl = readline.createInterface({ input: rs, crlfDelay: Infinity })
+    const scanDerivedExportSegments = async (rows: AsyncIterable<string[]>): Promise<ExportSegments> => {
       let scanner: ReturnType<typeof createExportSegmentScanner> | null = null
       let rowIndex = 0
-      try {
-        for await (const line of rl) {
-          if (!scanner) {
-            const headers = new Map(parseHeader(line).map((header, index) => [normalizeHeader(header), index]))
-            scanner = createExportSegmentScanner(headers)
-          } else if (line) scanner.add(parseCsvLineFast(line), rowIndex++)
-        }
-        return scanner?.finish() ?? { invalidGaze: [], blinks: [] }
-      } finally {
-        rl.close()
-        rs.close()
+      for await (const row of rows) {
+        if (!scanner) {
+          const headers = new Map(row.map((header, index) => [normalizeHeader(header), index]))
+          scanner = createExportSegmentScanner(headers)
+        } else scanner.add(row, rowIndex++)
       }
+      return scanner?.finish() ?? { invalidGaze: [], blinks: [] }
     }
 
     const outputFiles: string[] = []
@@ -134,15 +123,14 @@ export function registerRecordExportHandlers(_dependencies: RecordExportDependen
       }
   
       try {
+        const sdkEvents = await readEt28ExportEvents(csvPath)
         const needsInvalidGaze = columns.includes('invalid_gaze_index') || columns.includes('invalid_gaze_duration_ms')
         const needsBlinkEvents =
           columns.includes('blink_index') || columns.includes('blink_duration_ms') || columns.includes('blink_marker')
         const derivedSegments =
           needsInvalidGaze || needsBlinkEvents
-            ? await scanDerivedExportSegments(csvPath)
+            ? await scanDerivedExportSegments(readRecordExportRows(csvPath, sdkEvents))
             : { invalidGaze: [], blinks: [] }
-        const rs = fs.createReadStream(csvPath, { encoding: 'utf-8' })
-        const rl = readline.createInterface({ input: rs, crlfDelay: Infinity })
         const outStream = fs.createWriteStream(outPath, { encoding: 'utf-8' })
         const writeLine = async (line: string) => {
           if (!outStream.write(line)) {
@@ -191,12 +179,11 @@ export function registerRecordExportHandlers(_dependencies: RecordExportDependen
         }
   
         await writeLine('\uFEFF')
-        for await (const line of rl) {
+        for await (const parts of readRecordExportRows(csvPath, sdkEvents)) {
           if (!headerParsed) {
             headerParsed = true
-            const headers = parseHeader(line)
             headerIndexMap = new Map<string, number>()
-            headers.forEach((h, idx) => headerIndexMap.set(normalizeHeader(h), idx))
+            parts.forEach((h, idx) => headerIndexMap.set(normalizeHeader(h), idx))
             deriveMotionValues = createExportMotionDeriver(headerIndexMap)
             deriveSmoothingValues = createExportSmoothingDeriver(headerIndexMap, r)
             deriveSegmentValues = createExportSegmentReader(headerIndexMap, derivedSegments)
@@ -226,8 +213,7 @@ export function registerRecordExportHandlers(_dependencies: RecordExportDependen
             await writeLine(outHeaders.map(csvEscape).join(',') + '\n')
             continue
           }
-          if (!line || exportColumnDefs.length === 0) continue
-          const parts = parseCsvLineFast(line)
+          if (exportColumnDefs.length === 0) continue
           const derivedValues = { ...deriveMotionValues(parts), ...deriveSegmentValues(parts, dataRowIndex), ...deriveSmoothingValues(parts) }
           const measurementContext = { ...r, derivedValues }
           const aoiValues = aoiDerivers.get(r)?.(parts)
@@ -266,8 +252,6 @@ export function registerRecordExportHandlers(_dependencies: RecordExportDependen
           await writeLine(picked.map(csvEscape).join(',') + '\n')
           dataRowIndex += 1
         }
-        rl.close()
-        rs.close()
         await new Promise<void>((resolve, reject) => {
           outStream.end(() => resolve())
           outStream.once('error', reject)

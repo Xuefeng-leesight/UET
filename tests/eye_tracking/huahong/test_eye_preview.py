@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 from services.eye_tracking.adapters.huahong.et28_eye_preview import ET28EyePreview
 from services.eye_tracking.adapters.huahong.service import HuahongService
-from services.eye_tracking.adapters.huahong.vendor import et28_dll as binding
+from services.eye_tracking.adapters.huahong.vendor import aiot_dll as binding
 
 
 class ET28EyePreviewTests(unittest.TestCase):
@@ -17,41 +17,46 @@ class ET28EyePreviewTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         root = Path(self.tmp.name)
-        dll = root / 'et28/bin/windows/x64'
-        dll.mkdir(parents=True)
-        (dll / 'et28_interface.dll').touch()
         self.lib = Mock()
-        for name in ('et28_device_init', 'et28_device_connect', 'et28_setCamera_para',
-                     'et28_setIrLedBrightness', 'et28_startCamera', 'et28_stopCamera',
-                     'et28_device_disconnect', 'et28_device_deinit'):
+        for name in ('aiotGlass_device_init', 'aiotGlass_initTracker', 'aiotGlass_setCamera_para',
+                     'aiotGlass_setIrLedBrightness', 'aiotGlass_startCamera', 'aiotGlass_device_deinit'):
             getattr(self.lib, name).return_value = 0
-        self.lib.et28_getGzSdkVersion.return_value = b'preview-test'
+        self.lib.createAiotGlassDevice.return_value = 42
+        self.lib.aiotGlass_getSdkVersion.return_value = b'preview-test'
 
-        def parameters(array, capacity, count):
+        def parameters(handle, array, capacity, count):
             C.cast(count, C.POINTER(C.c_uint32))[0] = 1
             array[0].m_worldWidth, array[0].m_worldHeight = 1920, 1080
             array[0].m_worldCameraCropType = 1
             array[0].m_irOneEyeWidth, array[0].m_irOneEyeHeight = 2, 2
             return 0
 
-        self.lib.et28_getCamera_para.side_effect = parameters
+        def devices(array, capacity, count):
+            C.cast(count, C.POINTER(C.c_uint32))[0] = 1
+            array[0].m_pid_leftEye, array[0].m_pid_rightEye = binding.PID_ET28_LEFT, binding.PID_ET28_RIGHT
+            array[0].m_vid_world, array[0].m_pid_world = binding.VID_ET28_WORLD, binding.PID_ET28_WORLD
+            return 0
+
+        self.lib.getAiotGlassDevicesList.side_effect = devices
+        self.lib.aiotGlass_getCamera_para.side_effect = parameters
         self.service = HuahongService('HH_ET28', root)
         self.connect()
 
     def connect(self):
         self.service.generation += 1
         self.service.state = 'connecting'
-        with patch.object(binding, 'library', return_value=self.lib), patch.dict('os.environ', {}, clear=False):
+        with patch.object(binding, 'load_library', return_value=self.lib), patch(
+                'services.eye_tracking.adapters.huahong.aiot_et28.present_et28_cameras', return_value=True):
             self.service._connect_et28()
         self.service.state = 'ready'
         self.service._last_frame = time.monotonic()
-        self.eye_callback = self.lib.et28_registerEyeCameraCb.call_args.args[0]
-        self.scene_callback = self.lib.et28_registerWorldCameraCb.call_args.args[0]
+        self.eye_callback = self.lib.aiotGlass_registerLeftEyeCameraCb.call_args.args[1]
+        self.right_callback = self.lib.aiotGlass_registerRightEyeCameraCb.call_args.args[1]
+        self.scene_callback = self.lib.aiotGlass_registerWorldCameraCb.call_args.args[1]
 
     @staticmethod
     def buffer():
-        # Native rows contain [left-eye pixels, right-eye pixels], per sample.
-        return (C.c_uint8 * 8)(11, 12, 21, 22, 13, 14, 23, 24)
+        return (C.c_uint8 * 4)(11, 12, 13, 14)
 
     @staticmethod
     def scene_buffer():
@@ -61,12 +66,15 @@ class ET28EyePreviewTests(unittest.TestCase):
 
     def test_registered_ctypes_callback_copies_native_pixels_and_labels_each_eye(self):
         self.assertIsInstance(self.eye_callback, binding.CameraCallback)
-        self.assertTrue(any(callback is self.eye_callback for callback in self.service.callbacks))
+        self.assertTrue(any(callback is self.eye_callback for callback in self.service._et28.callbacks))
         self.assertEqual(self.service.capabilities.video_streams, ('scene', 'left_eye', 'right_eye'))
         operations = [call[0] for call in self.lib.mock_calls]
-        self.assertLess(operations.index('et28_registerEyeCameraCb'), operations.index('et28_startCamera'))
+        self.assertLess(operations.index('aiotGlass_registerRightEyeCameraCb'), operations.index('aiotGlass_startCamera'))
         buffer = self.buffer()
         self.eye_callback(None, buffer, len(buffer))
+        right_buffer = (C.c_uint8 * 4)(21, 22, 23, 24)
+        self.right_callback(None, right_buffer, len(right_buffer))
+        right_buffer[0] = 255
         for i in range(len(buffer)):
             buffer[i] = 255
         left, right = self.service.read(0)
@@ -77,10 +85,10 @@ class ET28EyePreviewTests(unittest.TestCase):
             self.assertEqual(frame.pixels, bytes(value for value in values for _ in range(3)))
             self.assertEqual(frame.identity.source, 'HH_ET28')
             self.assertEqual(frame.identity.generation, self.service.generation)
-        self.assertEqual(left.identity.source_time_s, right.identity.source_time_s)
+        self.assertLess(left.identity.received_sequence, right.identity.received_sequence)
         self.assertEqual(self.service.read(0), [])
 
-    def test_native_rate_only_keeps_latest_pair_without_recording_queue_pressure(self):
+    def test_native_rate_only_keeps_latest_frame_per_eye_without_recording_queue_pressure(self):
         self.service.byte_limit = 1
         old_scene_time = self.service._last_frame
         buffer = self.buffer()
@@ -93,11 +101,11 @@ class ET28EyePreviewTests(unittest.TestCase):
         self.assertEqual(self.service._last_frame, old_scene_time)
         self.assertEqual(self.service.last_gaze, 0)
         frames = self.service.read(0)
-        self.assertEqual(len(frames), 2)
+        self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].pixels[0], 599 % 256)
         self.assertEqual(frames[0].identity.received_sequence, 600)
 
-    def test_malformed_preview_drops_safely_keeps_last_good_pair_and_recovers(self):
+    def test_malformed_preview_drops_safely_keeps_last_good_frame_and_recovers(self):
         buffer = self.buffer()
         self.eye_callback(None, buffer, len(buffer))
         with self.assertLogs(level='WARNING') as logged:
@@ -113,7 +121,7 @@ class ET28EyePreviewTests(unittest.TestCase):
         with patch('services.eye_tracking.adapters.huahong.et28_eye_preview.time.monotonic', return_value=time.monotonic() + .1):
             self.assertEqual(self.service.read(0)[0].pixels[0], 17)
 
-    def test_preview_conversion_is_limited_to_twenty_hz_and_pending_pair_stays_latest(self):
+    def test_preview_conversion_is_limited_to_twenty_hz_and_pending_frame_stays_latest(self):
         buffer = self.buffer()
         with patch('services.eye_tracking.adapters.huahong.et28_eye_preview.time.monotonic', return_value=100) as clock:
             self.eye_callback(None, buffer, len(buffer))
@@ -142,13 +150,13 @@ class ET28EyePreviewTests(unittest.TestCase):
         scene_pixels = self.scene_buffer()
         self.scene_callback(None, scene_pixels, len(scene_pixels))
         frames = {frame.stream: frame for frame in self.service.read(0)}
-        self.assertEqual(set(frames), {'scene', 'left_eye', 'right_eye'})
+        self.assertEqual(set(frames), {'scene', 'left_eye'})
         self.assertEqual(frames['scene'].pixels, bytes(scene_pixels))
         self.assertEqual((frames['scene'].width, frames['scene'].height), (1920, 1080))
         self.assertEqual(self.service.shape, (1920, 1080))
         self.assertEqual(self.service.queued_bytes, 0)
 
-    def test_close_clears_pending_pair_and_old_callback_cannot_pollute_reconnect(self):
+    def test_close_clears_pending_frame_and_old_callback_cannot_pollute_reconnect(self):
         old_callback = self.eye_callback
         buffer = self.buffer()
         old_callback(None, buffer, len(buffer))
@@ -163,7 +171,7 @@ class ET28EyePreviewTests(unittest.TestCase):
         self.assertEqual(self.service.read(0), [])
         self.eye_callback(None, buffer, len(buffer))
         frames = self.service.read(0)
-        self.assertEqual(len(frames), 2)
+        self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].identity.generation, 2)
 
     def test_eye_arriving_during_empty_scene_queue_wait_is_delivered(self):
@@ -171,7 +179,7 @@ class ET28EyePreviewTests(unittest.TestCase):
         timer = threading.Timer(.01, self.eye_callback, args=(None, buffer, len(buffer)))
         timer.start()
         try:
-            self.assertEqual([frame.stream for frame in self.service.read(100)], ['left_eye', 'right_eye'])
+            self.assertEqual([frame.stream for frame in self.service.read(100)], ['left_eye'])
         finally:
             timer.join(1)
 
@@ -237,8 +245,8 @@ class ET28EyePreviewTests(unittest.TestCase):
         preview = ET28EyePreview(400, 400, self.service.identity)
         row = bytes(range(200)) * 2 + bytes(range(200, 256)) * 7 + bytes(range(200, 208))
         self.assertEqual(len(row), 800)
-        raw = row * 400
-        buffer = (C.c_uint8 * len(raw)).from_buffer_copy(raw)
+        left_buffer = (C.c_uint8 * 160000).from_buffer_copy(row[:400] * 400)
+        right_buffer = (C.c_uint8 * 160000).from_buffer_copy(row[400:] * 400)
         real_import = builtins.__import__
 
         def no_scientific_runtime(name, *args, **kwargs):
@@ -247,7 +255,8 @@ class ET28EyePreviewTests(unittest.TestCase):
             return real_import(name, *args, **kwargs)
 
         with patch('builtins.__import__', side_effect=no_scientific_runtime):
-            preview.callback(None, buffer, len(buffer))
+            preview.accept('left_eye', left_buffer, len(left_buffer))
+            preview.accept('right_eye', right_buffer, len(right_buffer))
             left, right = preview.take()
         for frame, gray in ((left, row[:400]), (right, row[400:])):
             self.assertEqual((frame.width, frame.height), (400, 400))

@@ -76,7 +76,7 @@ chmod 600 .env.production
 ./deploy/production-up.sh
 ```
 
-Nginx 首次以 HTTP 提供 ACME 验证，Certbot 自动申请 Let's Encrypt 证书后切换 HTTPS；续期服务每 12 小时检查一次，成功续期后自动通知 Nginx 重载。完整步骤、续期演练、备份和排障见[Docker 生产部署文档](../../docs/部署/Docker生产部署.md)。
+Nginx 首次以 HTTP 提供 ACME 验证，Certbot 自动申请 Let's Encrypt 证书后切换 HTTPS；续期服务每 12 小时检查一次，成功续期后自动通知 Nginx 重载。完整步骤、续期演练、备份和排障见Docker 生产部署文档。
 
 ## 密钥轮换
 

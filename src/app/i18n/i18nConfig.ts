@@ -2036,6 +2036,14 @@ const EN_RULES: RegexRule[] = [
   { pattern: /^(\S+)\s*发送失败$/u, replace: 'Failed to send $1' },
   { pattern: /^等待\s*(\S+)\s*响应超时$/u, replace: 'Timed out waiting for $1 response' },
   { pattern: /^校准成功，但追踪未启动（(.+)）。请重试校准或重新启动设备。?$/u, replace: 'Calibration succeeded, but tracking did not start ($1). Retry calibration or restart the device.' },
+  { pattern: /^校准结果不合格（左眼 (\S+) 分、右眼 (\S+) 分，需在 (\d+)～(\d+) 分之间），本次结果未保存，仍使用上一次的校准。请让受试者坐好、双眼都在画面中，然后重新校准。$/u, replace: 'Calibration result rejected (left eye $1, right eye $2; must be between $3 and $4). This result was not saved and the previous calibration is still in use. Ask the participant to sit upright with both eyes in view, then calibrate again.' },
+  { pattern: /^校准结果不合格（左眼 (\S+) 分、右眼 (\S+) 分，需在 (\d+)～(\d+) 分之间），本次结果未保存，当前没有可用的校准。请让受试者坐好、双眼都在画面中，然后重新校准。$/u, replace: 'Calibration result rejected (left eye $1, right eye $2; must be between $3 and $4). This result was not saved and no calibration is available. Ask the participant to sit upright with both eyes in view, then calibrate again.' },
+  { pattern: /^校准未完成：第 (\d+) 个点多次采集失败。\s*请让受试者坐正、双眼都在画面中、注视圆点时不要眨眼，然后重新校准。$/u, replace: 'Calibration not completed: point $1 failed several times. Ask the participant to sit upright with both eyes in view and not blink while looking at the dot, then calibrate again.' },
+  { pattern: /^校准未完成：第 (\d+) 个点多次采集失败。$/u, replace: 'Calibration not completed: point $1 failed several times.' },
+  { pattern: /^请让受试者坐正、双眼都在画面中、注视圆点时不要眨眼，然后重新校准。$/u, replace: 'Ask the participant to sit upright with both eyes in view and not blink while looking at the dot, then calibrate again.' },
+  { pattern: /^校准未完成：设备重新连接失败。\s*请关闭设备后重新打开，再进行校准。$/u, replace: 'Calibration not completed: the device could not reconnect. Turn the device off and on again, then calibrate.' },
+  { pattern: /^校准未完成：设备重新连接失败。$/u, replace: 'Calibration not completed: the device could not reconnect.' },
+  { pattern: /^请关闭设备后重新打开，再进行校准。$/u, replace: 'Turn the device off and on again, then calibrate.' },
   { pattern: /^[（(](\d+)\s*个映射注视点[)）]$/u, replace: '($1 mapped fixation points)' },
   { pattern: /^可重复选择多段；每段默认激活，并严格用于[「“"](.+)[」”"]的\s*AOI\s*统计。?$/u, replace: 'Multiple segments can be selected; each is active by default and strictly used for the AOI statistics of "$1".' },
   { pattern: /^全局统计范围\s*(\S+)\s*-\s*(\S+)[（(](.+)[)）]$/u, replace: 'Global statistics range $1 - $2 ($3)' },
@@ -2324,13 +2332,59 @@ const EN_RULES: RegexRule[] = [
   { pattern: /^(.+)_表情模块\.mp4$/u, replace: '$1_facial module.mp4' },
 ];
 
+// "ET28/Pupil 未找到…摄像头（已等待 N 秒）；…" from the eye-tracking services, for
+// every combination of missing cameras (listed in the order 场景、左眼、右眼).
+const CAMERA_NAMES: Array<[zh: string, en: string, ja: string]> = [
+  ['场景', 'scene', 'シーン'],
+  ['左眼', 'left-eye', '左眼'],
+  ['右眼', 'right-eye', '右眼'],
+];
+const missingCameraRules = (language: 'en' | 'ja'): RegexRule[] => {
+  const rules: RegexRule[] = [];
+  for (let mask = 1; mask < 8; mask += 1) {
+    const picked = CAMERA_NAMES.filter((_, index) => mask & (1 << index));
+    const zh = picked.map(([name]) => name).join('、');
+    rules.push({
+      pattern: new RegExp(`^(ET28|Pupil)\\s*未找到${zh}摄像头[（(]已等待\\s*(\\d+)\\s*秒[）)][；;]\\s*需要场景、左眼、右眼三个摄像头都已连接$`, 'u'),
+      replace: language === 'en'
+        ? `$1: ${picked.map(([, en]) => en).join(', ')} camera not found (waited $2 s); the scene, left-eye and right-eye cameras must all be connected`
+        : `$1：${picked.map(([, , ja]) => ja).join('・')}カメラが見つかりません（$2 秒待機）。シーン・左眼・右眼の3台のカメラをすべて接続してください`,
+    });
+    // Tooltip of the disabled "启动设备" button while the ET28 is incomplete.
+    rules.push({
+      pattern: new RegExp(`^华弘眼镜未找到${zh}摄像头$`, 'u'),
+      replace: language === 'en'
+        ? `ET28 cameras not found: ${picked.map(([, en]) => en).join(', ')}`
+        : `ET28 の${picked.map(([, , ja]) => ja).join('・')}カメラが見つかりません`,
+    });
+  }
+  rules.push(
+    { pattern: /^正在检查华弘眼镜…$/u, replace: language === 'en' ? 'Checking the ET28 glasses…' : 'ET28 グラスを確認しています…' },
+    { pattern: /^正在保存录制，保存完成后才能启动设备$/u,
+      replace: language === 'en' ? 'Saving the recording; the device can be started when it is done' : '録画を保存しています。保存が完了するとデバイスを起動できます' },
+    { pattern: /^请先按下华弘眼镜的电源键打开设备$/u,
+      replace: language === 'en' ? 'Press the power button on the ET28 glasses to switch them on' : 'ET28 グラスの電源ボタンを押して電源を入れてください' },
+  );
+  if (language === 'en') {
+    rules.push({
+      pattern: /^Pupil\s*原生采集[:：]ID(\d+)\s*相机数量为\s*(\d+)[，,]需要唯一的双眼及场景相机；检查\s*USB、驱动或设备\s*UID\s*配置$/u,
+      replace: 'Pupil native capture: found $2 ID$1 cameras; exactly one of each eye camera and the scene camera is required. Check USB, drivers or the device UID settings',
+    });
+  }
+  rules.push({
+    pattern: /^无法读取 Windows 的 USB 设备列表$/u,
+    replace: language === 'en' ? 'Could not read the Windows USB device list' : 'Windows の USB デバイス一覧を読み取れません',
+  });
+  return rules;
+};
+
 export const TRANSLATION_BUNDLES: Record<Exclude<LanguageCode, 'zh-CN'>, TranslationBundle> = {
   'en-US': {
     exact: EN_EXACT,
-    rules: EN_RULES,
+    rules: [...missingCameraRules('en'), ...EN_RULES],
   },
   'ja-JP': {
     exact: JA_EXACT,
-    rules: JA_RULES,
+    rules: [...missingCameraRules('ja'), ...JA_RULES],
   },
 };

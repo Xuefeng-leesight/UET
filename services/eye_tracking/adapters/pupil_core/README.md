@@ -156,7 +156,7 @@ npm run dist:win
 
 工程回归位于 tests/eye_tracking/pupil_core，CI 使用 Windows/macOS 矩阵，覆盖协议、正式命令、路径授权、实际编码、异常恢复、音频及事件导出；增加 PyInstaller 构建和打包后进程连接/父管道退出检查。2026-09-27 已在本机构建 macOS arm64 独立程序；这不是签名/公证的完整 macOS 安装包，Homebrew FFmpeg/ffprobe 也不是可移植发行资产。Windows CI 尚未在远端执行，完整 Windows 安装、升级/卸载仍须目标机器验收。没有硬件时不能证明真机帧率、精度、校准或三旧型号无回归。
 
-协议依据：[Pupil Core Network API](https://docs.pupil-labs.com/core/developer/network-api/)。完整历史方案见 [接入方案](../../../../docs/方案/PupilCore接入方案.md)。
+协议依据：[Pupil Core Network API](https://docs.pupil-labs.com/core/developer/network-api/)。完整历史方案见 接入方案。
 
 ### 场景比例与校准坐标（2026-10-09）
 
@@ -202,7 +202,7 @@ Pupil 复用 ASeeGlass 的自动卡片中心识别及下方校准按钮，点击
 
 只有发起校准时发送 `pupil_detector.set_enabled`，启用两眼已加载的检测器，保证 Pye3D 的 2D 输入；视频开启和查询没有此副作用，不重置眼模型或 ROI。ACK 不能替代真实 3D 数据。数据通道每轮最多非阻塞接收 64 条，校准通知/事件各 16 条，视频 1 条，避免高频瞳孔数据在处理视频时积压，又保证命令及时返回。
 
-点结果包含 pupil_diagnostics：topic 数量、拒绝原因、置信度和源时间差、双眼有效/配对数量及参考窗口。前后端 debug 同时保存聚合诊断，get_device_status 可查询 received_by_topic。失败提示区分未收包、只有 2D、时间落后、低置信度、缺少眼模型与配对时间不匹配，失败不会推进点号。详细证据与同场景旧版/新版复现见 [10 月 10 日诊断](../../../../docs/debug/pupil-2026-10-10-zero-pupils.md)。
+点结果包含 pupil_diagnostics：topic 数量、拒绝原因、置信度和源时间差、双眼有效/配对数量及参考窗口。前后端 debug 同时保存聚合诊断，get_device_status 可查询 received_by_topic。失败提示区分未收包、只有 2D、时间落后、低置信度、缺少眼模型与配对时间不匹配，失败不会推进点号。详细证据与同场景旧版/新版复现见 10 月 10 日诊断。
 
 
 ## 2026-10-10 数据质量与独立验证（当前规则）
@@ -212,13 +212,13 @@ Pupil 复用 ASeeGlass 的自动卡片中心识别及下方校准按钮，点击
 - **配对**：预览和 CSV 均以 `gaze.base_data` 的真实贡献眼为准，允许瞳孔时间位于双眼平均 gaze 时间两侧（最多100 ms），不混入另一眼缓存、不跨连接。仅无 base_data 的历史兼容样本使用同代次、100 ms内的过去缓存。
 - **模型**：检测 confidence 与 `model_confidence` 分开。校准样本要求检测 confidence≥0.6、模型 confidence=1、sphere中心 x/y在±10 mm、z在20–75 mm，直径1–9 mm。每点至少10帧、每眼10条合格数据且配对合格比例≥80%。目标源归一化坐标每轴范围≤0.025。失败点不推进；不会自动冻结/重置眼球模型。
 - **点数与自由取点**：三/五/九点均由场景相机中的实体卡片实际中心提供参考，不指定方位或移动顺序，不显示目标框，也不强制覆盖九宫格及画面边缘。每点可自由选择双眼能舒适稳定注视的位置；各点应分散且不共线，拟合前只作整体退化检查：两轴跨度≥0.15、最大三角形面积≥0.01。该检查不指定任何点的位置，也不是官方精度达标阈值。1点仅保留底层协议兼容。点号只是进度，界面网格索引不作为实际参考坐标。
-- **末点失败和诊断**：质量不足不推进点号，不丢弃已成功采样点；可移动卡片到其他位置重试当前点。失败提示给出已完成进度、双眼合格比例或样本数，并区分采样会话超时和 Capture 拟合超时。点结果继续保存 `tracked_center_top_left`，新增 `rejected_by_eye`；兼容字段 `target_region_required=false`、`target_region_ok=true`、`target_bounds_top_left=null`。主失败原因根据受影响眼的拒绝统计判断，避免另一眼少量模型异常掩盖本眼大量检测置信度不足。最新证据见 [末点失败与自由取点](../../../../docs/debug/pupil-2026-10-10-final-point-free-card.md)。
+- **末点失败和诊断**：质量不足不推进点号，不丢弃已成功采样点；可移动卡片到其他位置重试当前点。失败提示给出已完成进度、双眼合格比例或样本数，并区分采样会话超时和 Capture 拟合超时。点结果继续保存 `tracked_center_top_left`，新增 `rejected_by_eye`；兼容字段 `target_region_required=false`、`target_region_ok=true`、`target_bounds_top_left=null`。主失败原因根据受影响眼的拒绝统计判断，避免另一眼少量模型异常掩盖本眼大量检测置信度不足。最新证据见 末点失败与自由取点。
 - **独立验证**：拟合成功后点击「校准测试」，在同一页面采样三个分散目标，不重新拟合。按源时间在相邻参考帧之间插值（间隔最多100 ms），只使用有效且模型合格的 gaze，每目标至少10对。输出平均/中位/P95源视频像素误差、有效比例和匹配明细；任务要求被试持续注视中心，软件不能独立观察其主观注视目标。三点三角形面积至少0.01；报告没有角度精度或达标分数（`accuracyAcceptance=not_configured`）。
 - **状态**：验证必须使用当前连接已验证 token，验证期间禁止录制；取消验证保留原拟合及已完成报告，失败/超时/断连/外部新校准使 token 失效。迟到消息不能恢复已结束的任务。录制附档保留训练数据及最后一次完整验证，不保留半轮测量作为完整报告。
 - **导出**：异常模型 gaze 不写主注视坐标；源坐标和原因保存在 `source_norm_pos_*` / `gaze_invalid_reason`，原始消息也仍保留。像素瞳孔直径按真实配对导出，异常3D模型毫米值只写 `*_pupil_raw_diameter_mm`，主毫米列留空；另记录每眼模型 confidence/quality。不存在的单眼注视、眼睑、扫视等量继续留空。
 - **事件**：眨眼 confidence 是 Capture 事件量，不套用瞳孔0.6阈值；完整同代次 onset/offset 才计一次，孤立阶段显式标记且不向后污染 blink 状态。注视事件保留 Capture 在线窗口语义，不能作为独立精度真值。
 - **统计**：`gazeMessageRateHz`、`validGazeRateHz`、`eyeSamplingRateHz`、`eyeModelValidPercent`、`gazeInvalidReasons` 分开归档，录制恢复也重算这些字段。列表/meta 不再将实测246.96 Hz套成240档位；gaze率不等于眼相机独立采样率。
 
-现有数据可用 `tools/pupil/rebuild_recording.py <原CSV> --output <新的目录>` 生成独立派生CSV及报告。工具核对原始/标准日志逐条身份、前后SHA-256，拒绝覆盖，不修改视频或工程索引。它修复配对与质量标记，不能修复当时异常的眼球模型或重新生成准确 gaze。真机记录的审计及修复结果见 [完整性报告](../../../../docs/debug/pupil-2026-10-10-recording-integrity.md) 与 [修复验收](../../../../docs/debug/pupil-2026-10-10-quality-fixes.md)。
+现有数据可用 `tools/pupil/rebuild_recording.py <原CSV> --output <新的目录>` 生成独立派生CSV及报告。工具核对原始/标准日志逐条身份、前后SHA-256，拒绝覆盖，不修改视频或工程索引。它修复配对与质量标记，不能修复当时异常的眼球模型或重新生成准确 gaze。真机记录的审计及修复结果见 完整性报告 与 修复验收。
 
 依据：[官方数据匹配](https://docs.pupil-labs.com/core/developer/#pupil-data-matching)、[3D模型生理范围与模型confidence](https://github.com/pupil-labs/pupil/releases/tag/v3.4)、[官方校准与验证](https://docs.pupil-labs.com/core/software/pupil-capture/#calibration)。缺少相机内参与独立真机目标实测时，不宣称角度精度已通过。

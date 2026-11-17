@@ -90,7 +90,7 @@ eye_tracking/
 | `invensun_7/` | `driver.py` 厂商调用；`sdk_driver.py` 历史符号兼容别名；`paths.py` 查找 SDK；`ctypes_types.py` 类型兼容；`data_normalizer.py` 坐标/有效位转换；`README.md` 接入说明 | 全部源码保留，真正厂商供应物在 `SDK/invensun_7/` |
 | `huahong/` | `service.py` ET10C/ET28 生命周期；`data_normalizer.py` 标准化；`requirements.txt` 独立依赖；`README.md` 配置和验收 | 全部保留 |
 | `huahong/vendor/et10c_gaze/` | `tracker.py` 追踪调用；`device.py` 枚举；`_loader.py` DLL/符号；`_ctypes_defs.py` ABI；`_constants.py` 枚举/常量；`_progress.py` 校准进度；`errors.py` 错误类型 | 从厂商 sample 精简并适配的生产绑定，不能因 SDK 中另有 sample 而去重 |
-| `huahong/vendor/et28_dll.py` | ET28 ctypes 绑定 | 生产 service 依赖；保留 |
+| `huahong/vendor/aiot_dll.py` | ET28 aiotGlass ctypes 绑定 | 生产 service 依赖；保留 |
 | `pupil_core/` | Native/Capture 共用的校准、标准化、质量与验证组件，以及显式 Capture 协议实现 | 默认 native 仍依赖此目录，不能整体删除 |
 | `pupil_native/` | 相机、检测器、原生 Gazer3D、事件和子进程管理 | 默认 Pupil 运行链路，全部生产文件保留 |
 

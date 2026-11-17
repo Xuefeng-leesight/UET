@@ -76,6 +76,29 @@ class NativeSource:
             self.fit_worker.close()
             self.fit_worker = None
 
+    def mapping_fingerprint(self):
+        """Identifies the scene camera a mapping was fitted for (model, resolution, intrinsics)."""
+        import hashlib
+        import json
+        intrinsics = self.cameras.get(2, {}).get('intrinsics')
+        if intrinsics is None:
+            return None
+        return hashlib.sha256(json.dumps(intrinsics, sort_keys=True, default=str).encode()).hexdigest()
+
+    def restore_mapping(self, params, fingerprint):
+        """Reuse gaze-mapping parameters saved from an earlier fit of this scene camera."""
+        self._check_owner()
+        if set(self.cameras) != {0, 1, 2}:
+            raise ValueError('Three cameras must be ready before reusing a calibration')
+        if not fingerprint or fingerprint != self.mapping_fingerprint():
+            raise ValueError('场景摄像头参数与保存的校准不一致，请重新校准')
+        from .gazer import NativeGazer
+        mapper = NativeGazer(self.cameras[2]['intrinsics'], params)
+        self.cancel_fit()
+        self.reset_events()
+        self.last_gaze = None
+        self.mapper = mapper
+
     def invalidate_mapping(self):
         self.cancel_fit()
         self.mapper = None
@@ -185,7 +208,10 @@ class NativeSource:
             for role, worker in self.workers.items():
                 for packet in worker.poll(32 if role != 2 else 1):
                     if packet['kind'] == 'error':
-                        raise RuntimeError(f"Camera ID{role}: {packet['message']}")
+                        # Messages that already name the cameras are shown (and translated) as is.
+                        # (Not named `message`: that is the packet builder used in this function.)
+                        reason = packet['message']
+                        raise RuntimeError(reason if reason.startswith('Pupil') else f"Camera ID{role}: {reason}")
                     if packet['kind'] == 'ready':
                         self.cameras[role] = packet
                         self.camera_ready_at[role] = time.monotonic()

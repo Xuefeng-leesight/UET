@@ -204,4 +204,9 @@ try {
   assert.equal(fs.readFileSync(csvPath, 'utf8'), csv);
   assert.ok(!fileRows[0].some(value => value.includes('provenance')), 'internal algorithm provenance adds no export column');
   console.log('PASS causal 3D smoothing v1: analytic response, source/eye qualification, discontinuities, receive-order sorting, legacy compatibility, unsupported-source guards, and real preview/full export parity');
-} finally { fs.rmSync(root, { recursive: true, force: true }); }
+} finally {
+  // The handlers close their CSV read streams asynchronously. Windows cannot remove a
+  // file that is still open, so give those closes one turn of the event loop first.
+  await new Promise(resolve => setTimeout(resolve, 100));
+  fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+}

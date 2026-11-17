@@ -25,6 +25,8 @@ function load(relative) {
   vm.runInNewContext(js, { exports, process, console: { ...console, log() {} }, Buffer, setTimeout, clearTimeout,
     require(specifier) {
       if (specifier === 'react') return React;
+      // Icons are decoration here; any icon name renders nothing.
+      if (specifier === 'lucide-react') return new Proxy({}, { get: () => () => null });
       if (specifier.startsWith('node:')) return requireNative(specifier);
       if (specifier === 'electron') return { ipcMain: { handle: (id, callback) => { handlers[id] = callback; } } };
       if (specifier === '@/app/i18n/useLanguage') return { useLanguage: () => ({ language: 'zh-CN' }) };
@@ -143,7 +145,7 @@ try {
     { ...base, calibrationQuality: { ...quality, right: eye([99, 99]) } },
     { ...base, calibrationQuality: { ...quality, left: { ...quality.left, truncated: true } } },
     { ...base, calibrationQuality: { ...quality, left: { ...quality.left,
-      points: quality.left.points.map(point => ({ ...point, status: 2 })) } } },
+      points: quality.left.points.map(point => ({ ...point, status: 0x80000000 })) } } },
     { ...base, calibrationQuality: quality, calibrationVerified: false },
     { ...base, calibrationQuality: quality, calibrationProvider: 'other' },
     { ...base, calibrationQuality: quality, deviceModel: 'HH_ET10C' },
@@ -187,7 +189,7 @@ try {
       ? { ...record, calibrationLeftScore: 100, calibrationRightScore: 100 } : record) }));
   const rebuilt = await handlers['load-recordings']({}, { projectDir: directory });
   assert.equal(rebuilt.summaryCacheHit, false, 'Version 8 aliases must be discarded even with unchanged source files');
-  assert.equal(JSON.parse(fs.readFileSync(summaryPath, 'utf8')).version, 10);
+  assert.equal(JSON.parse(fs.readFileSync(summaryPath, 'utf8')).version, 12);
   for (const record of mapLoadedRecordings(json(rebuilt.records))) {
     if (rejectedNames.includes(record.name)) assert.equal(record.calibrationScores, undefined);
   }

@@ -1,4 +1,5 @@
 import ctypes as C
+from services.eye_tracking.adapters.huahong.aiot_et28 import AiotET28
 from dataclasses import replace
 import json
 from pathlib import Path
@@ -26,31 +27,39 @@ class AdapterTests(unittest.TestCase):
         service._last_frame = time.monotonic()
         return service
 
+    def attach_et28(self, service):
+        lib = Mock()
+        with patch('services.eye_tracking.adapters.huahong.aiot_et28.b.load_library', return_value=lib):
+            service._et28 = AiotET28('/mock')
+        service._et28.handle = 42
+        return lib
+
     def et28_with_feature(self):
-        from services.eye_tracking.adapters.huahong.vendor import et28_dll as b
+        from services.eye_tracking.adapters.huahong.vendor import aiot_dll as b
         service = self.service('HH_ET28')
-        service.points, service.lib = 3, Mock()
+        service.points = 3
+        self.attach_et28(service)
         payload = b'validated-native-feature'
-        def bias(left, right):
+        def bias(handle, left, right):
             for eye, pointer in enumerate((left, right)):
-                value = C.cast(pointer, C.POINTER(b.et28_GazeTrackerCalibBias)).contents
+                value = C.cast(pointer, C.POINTER(b.AiotGazeTrackerCalibBias)).contents
                 value.numOfCalibrate = 3
                 for index, score in enumerate(((100, 97, 101), (99, 99, 100))[eye]):
                     value.Score[index] = score
                     value.Bias[index].x, value.Bias[index].y = .125, -.25
                 value.cablicStatus[1] = 1 if eye == 0 else 0
-            C.cast(left, C.POINTER(b.et28_GazeTrackerCalibBias)).contents.Bias[0].x = float('nan')
+            C.cast(left, C.POINTER(b.AiotGazeTrackerCalibBias)).contents.Bias[0].x = float('nan')
             return 0
-        def length(pointer):
+        def length(handle, pointer):
             C.cast(pointer, C.POINTER(C.c_uint32))[0] = len(payload)
-        def save(data, written):
+        def save(handle, data, written):
             self.assertIsNone(service.calibration_quality, 'Quality published before feature export succeeds')
             data[:len(payload)] = payload
-            length(written)
+            length(handle, written)
             return 0
-        service.lib.et28_getCalibBias.side_effect = bias
-        service.lib.et28_getFeatureLen.side_effect = length
-        service.lib.et28_SaveCalibrationDataBin.side_effect = save
+        service._et28.lib.aiotGlass_getCalibBias.side_effect = bias
+        service._et28.lib.aiotGlass_getFeatureLen.side_effect = length
+        service._et28.lib.aiotGlass_SaveCalibrationDataBin.side_effect = save
         self.assertEqual(service.feature(), payload)
         return service, payload
 
@@ -59,7 +68,7 @@ class AdapterTests(unittest.TestCase):
         with patch('services.eye_tracking.adapters.huahong.service.os.name', 'posix'):
             with self.assertRaisesRegex(RuntimeError, 'Windows x64'):
                 service.connect()
-        self.assertIsNone(service.lib)
+        self.assertIsNone(service._et28)
 
     def test_explicit_model_and_measured_screen_required(self):
         with self.assertRaises(ValueError):
@@ -141,8 +150,12 @@ class AdapterTests(unittest.TestCase):
             runtime._command('start_tracking', {'coe': 'foreign'})
         runtime._command('start_tracking', {'coe': token})
         runtime._command('cancel_calibration', {})
+        # A complete token saved for this subject and device is reused after cancel
+        # (the per-subject calibration reuse); a foreign token stays rejected.
+        self.assertEqual(runtime._command('start_tracking', {'coe': token}), {'calibration_reused': True})
+        runtime.service.restore_calibration.assert_called_once_with(b'feature', 3)
         with self.assertRaises(ValueError):
-            runtime._command('start_tracking', {'coe': token})
+            runtime._command('start_tracking', {'coe': 'foreign'})
         with self.assertRaises(ValueError):
             runtime._command('start', {'sdk_model': 'Pro'})
 
@@ -182,30 +195,30 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual((service.points, tracker.calib_points), (5, 5))
 
     def test_native_calibration_counts_coordinates_and_timeout_errors(self):
-        from services.eye_tracking.adapters.huahong.vendor import et28_dll as b
+        from services.eye_tracking.adapters.huahong.vendor import aiot_dll as b
         for model in ('HH_ET10C', 'HH_ET28'):
             service = self.service(model)
             for points in (True, 1.0, 0, 2, 25):
                 with self.subTest(model=model, points=points), self.assertRaises(ValueError):
                     service.start_calibration(points)
         service = self.service('HH_ET28')
-        service.lib = Mock()
-        service.lib.et28_InitCalibration.return_value = 0
+        self.attach_et28(service)
+        service._et28.lib.aiotGlass_InitCalibration.return_value = 0
         service.start_calibration(1)
-        service.lib.et28_InitCalibration.assert_called_once_with(1, b.EyeType.ET28_TWOEYE)
-        def point(pointer, timeout):
-            value = C.cast(pointer, C.POINTER(b.et28_GzTrackerPoint2d)).contents
+        service._et28.lib.aiotGlass_InitCalibration.assert_called_once_with(42, 1, b.EyeType.TWOEYE)
+        def point(handle, pointer, timeout):
+            value = C.cast(pointer, C.POINTER(b.AiotGzTrackerPoint2d)).contents
             self.assertAlmostEqual(value.x, .25)
             self.assertAlmostEqual(value.y, .75)
             self.assertEqual(timeout, 10)
             return -8
-        service.lib.et28_performOnePointCalibration.side_effect = point
+        service._et28.lib.aiotGlass_startCalibration.side_effect = point
         with self.assertRaisesRegex(RuntimeError, 'vendor error -8'):
             service.calibration_point(.25, .75)
         for point in ((float('nan'), .5), (float('inf'), .5), (-.1, .5), (.5, 1.1)):
             with self.subTest(point=point), self.assertRaises(ValueError):
                 service.calibration_point(*point)
-        self.assertEqual(service.lib.et28_performOnePointCalibration.call_count, 1)
+        self.assertEqual(service._et28.lib.aiotGlass_startCalibration.call_count, 1)
 
         et10 = self.service()
         et10.tracker = Mock()
@@ -221,37 +234,38 @@ class AdapterTests(unittest.TestCase):
         entered, stopped = threading.Event(), threading.Event()
         operations = []
 
-        def reinitialize(points):
+        def reinitialize(handle, points):
             nonlocal native_calibrated
             self.assertEqual(points, 3)
             operations.append('init')
             native_calibrated = False
             return 0
 
-        def load(data, length):
+        def load(handle, data, length):
             nonlocal native_calibrated
             self.assertEqual(bytes(data[:length]), payload)
             operations.append('load')
             native_calibrated = True
             return 0
 
-        def track(smoothing):
+        def track(handle, smoothing):
             self.assertEqual(smoothing, 12)
             operations.append('track')
             if not native_calibrated:
                 return -1
+            service.last_gaze = service.tracking_started + .001
             entered.set()
             stopped.wait(1)
             return 0
 
-        def stop():
+        def stop(handle):
             stopped.set()
             return 0
 
-        service.lib.et28_initTracker.side_effect = reinitialize
-        service.lib.et28_LoadCalibrationDataBin.side_effect = load
-        service.lib.et28_startTracker.side_effect = track
-        service.lib.et28_stopTracker.side_effect = stop
+        service._et28.lib.aiotGlass_initTracker.side_effect = reinitialize
+        service._et28.lib.aiotGlass_LoadCalibrationDataBin.side_effect = load
+        service._et28.lib.aiotGlass_startTracker.side_effect = track
+        service._et28.lib.aiotGlass_stopTracker.side_effect = stop
         for _ in range(2):
             entered.clear()
             stopped.clear()
@@ -263,60 +277,60 @@ class AdapterTests(unittest.TestCase):
             self.assertFalse(service.tracking)
             self.assertIsNone(service.worker)
         self.assertEqual(operations, ['init', 'load', 'track'] * 2)
-        self.assertEqual(service.lib.et28_startTracker.call_count, 2)
+        self.assertEqual(service._et28.lib.aiotGlass_startTracker.call_count, 2)
 
     def test_et28_init_or_load_failure_never_starts_native_tracking(self):
         uncalibrated = self.service('HH_ET28')
-        uncalibrated.lib = Mock()
+        self.attach_et28(uncalibrated)
         with self.assertRaisesRegex(RuntimeError, 'validated feature'):
             uncalibrated.start_tracking()
-        uncalibrated.lib.et28_initTracker.assert_not_called()
-        for operation in ('et28_initTracker', 'et28_LoadCalibrationDataBin'):
+        uncalibrated._et28.lib.aiotGlass_initTracker.assert_not_called()
+        for operation in ('aiotGlass_initTracker', 'aiotGlass_LoadCalibrationDataBin'):
             with self.subTest(operation=operation):
                 service, _ = self.et28_with_feature()
-                service.lib.et28_initTracker.return_value = 0
-                service.lib.et28_LoadCalibrationDataBin.return_value = 0
-                getattr(service.lib, operation).return_value = -7
+                service._et28.lib.aiotGlass_initTracker.return_value = 0
+                service._et28.lib.aiotGlass_LoadCalibrationDataBin.return_value = 0
+                getattr(service._et28.lib, operation).return_value = -7
                 with self.assertRaisesRegex(RuntimeError, 'vendor error -7'):
                     service.start_tracking()
                 self.assertFalse(service.tracking)
                 self.assertIsNone(service.calibration_quality)
                 self.assertIsNone(service.worker)
-                service.lib.et28_startTracker.assert_not_called()
-                if operation == 'et28_initTracker':
-                    service.lib.et28_LoadCalibrationDataBin.assert_not_called()
+                service._et28.lib.aiotGlass_startTracker.assert_not_called()
+                if operation == 'aiotGlass_initTracker':
+                    service._et28.lib.aiotGlass_LoadCalibrationDataBin.assert_not_called()
 
-    def test_et28_feature_is_invalidated_by_new_calibration_cancel_close_and_failed_quality(self):
-        for action in ('new', 'failed-new', 'cancel', 'close', 'quality'):
+    def test_et28_feature_is_invalidated_by_new_calibration_cancel_close_and_failed_export(self):
+        for action in ('new', 'failed-new', 'cancel', 'close', 'export'):
             with self.subTest(action=action):
                 service, _ = self.et28_with_feature()
-                lib = service.lib
-                lib.et28_InitCalibration.return_value = -7 if action == 'failed-new' else 0
-                lib.et28_getGzAlgVersion.return_value = b'algorithm'
-                lib.et28_getFirmWareVersion.return_value = b'firmware'
-                for name in ('et28_stopCamera', 'et28_device_disconnect', 'et28_device_deinit'):
+                lib = service._et28.lib
+                lib.aiotGlass_InitCalibration.return_value = -7 if action == 'failed-new' else 0
+                lib.aiotGlass_getGzAlgVersion.return_value = b'algorithm'
+                lib.aiotGlass_getFirmWareVersion.return_value = b'firmware'
+                for name in ('aiotGlass_stopCamera', 'aiotGlass_device_deinit'):
                     getattr(lib, name).return_value = 0
                 if action == 'new':
                     service.start_calibration(5)
                 elif action == 'failed-new':
                     with self.assertRaisesRegex(RuntimeError, 'vendor error -7'):
                         service.start_calibration(5)
-                    lib.et28_getGzAlgVersion.assert_not_called()
-                    lib.et28_getFirmWareVersion.assert_not_called()
+                    lib.aiotGlass_getGzAlgVersion.assert_not_called()
+                    lib.aiotGlass_getFirmWareVersion.assert_not_called()
                 elif action == 'cancel':
                     service.cancel_calibration()
                 elif action == 'close':
                     service.close()
                 else:
-                    lib.et28_getCalibBias.side_effect = None
-                    lib.et28_getCalibBias.return_value = -7
+                    lib.aiotGlass_SaveCalibrationDataBin.side_effect = None
+                    lib.aiotGlass_SaveCalibrationDataBin.return_value = -7
                     with self.assertRaisesRegex(RuntimeError, 'vendor error -7'):
                         service.feature()
                 with self.assertRaisesRegex(RuntimeError, 'validated feature'):
                     service.start_tracking()
                 self.assertIsNone(service.calibration_quality)
-                lib.et28_initTracker.assert_not_called()
-                lib.et28_startTracker.assert_not_called()
+                lib.aiotGlass_initTracker.assert_not_called()
+                lib.aiotGlass_startTracker.assert_not_called()
 
     def test_et28_quality_snapshot_preserves_sdk_scores_and_sanitizes_only_nonfinite_bias(self):
         service, _ = self.et28_with_feature()
@@ -333,18 +347,18 @@ class AdapterTests(unittest.TestCase):
             self.assertEqual(quality[eye]['count'], 3)
             self.assertFalse(quality[eye]['truncated'])
         json.dumps(quality, allow_nan=False)
-        service.lib.et28_SaveCalibrationDataBin.side_effect = None
-        service.lib.et28_SaveCalibrationDataBin.return_value = -7
+        service._et28.lib.aiotGlass_SaveCalibrationDataBin.side_effect = None
+        service._et28.lib.aiotGlass_SaveCalibrationDataBin.return_value = -7
         with self.assertRaisesRegex(RuntimeError, 'vendor error -7'):
             service.feature()
         self.assertIsNone(service.calibration_quality)
 
     def test_et28_quality_is_cleared_on_native_tracking_or_acquisition_failure(self):
         service, _ = self.et28_with_feature()
-        service.lib.et28_initTracker.return_value = service.lib.et28_LoadCalibrationDataBin.return_value = 0
-        service.lib.et28_startTracker.return_value = -7
-        service.start_tracking()
-        service.worker.join(1)
+        service._et28.lib.aiotGlass_initTracker.return_value = service._et28.lib.aiotGlass_LoadCalibrationDataBin.return_value = 0
+        service._et28.lib.aiotGlass_startTracker.return_value = -7
+        with self.assertRaisesRegex(RuntimeError, 'vendor error -7'):
+            service.start_tracking()
         self.assertIn('vendor error -7', service.failure)
         self.assertIsNone(service.calibration_quality)
         for failure in ('native', 'camera', 'gaze'):
@@ -363,15 +377,13 @@ class AdapterTests(unittest.TestCase):
 
     def test_et10_tracking_keeps_its_own_native_contract(self):
         service = self.service()
-        service.tracker, service.lib = Mock(), Mock()
+        service.tracker = Mock()
         service.tracker.stop_tracker.return_value = 0
         service.start_tracking()
         service.start_tracking()
         service.tracker.start_tracker.assert_called_once_with()
         service.stop_tracking()
         service.tracker.stop_tracker.assert_called_once_with()
-        service.lib.et28_initTracker.assert_not_called()
-        service.lib.et28_LoadCalibrationDataBin.assert_not_called()
 
     def test_et10_incomplete_or_bad_quality_cannot_export_feature(self):
         service = self.service()
@@ -392,61 +404,56 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(service.feature(), b'calibration')
         self.assertIsNone(service.calibration_quality)
 
-    def test_et28_both_eye_quality_and_feature_length_are_required(self):
-        from services.eye_tracking.adapters.huahong.vendor import et28_dll as b
+    def test_et28_quality_is_optional_but_feature_length_must_be_valid(self):
+        from services.eye_tracking.adapters.huahong.vendor import aiot_dll as b
         service = self.service('HH_ET28')
-        service.points, service.lib = 3, Mock()
+        service.points = 3
+        self.attach_et28(service)
         counts, statuses = [3, 3], [0, 1]
-        def bias(left, right):
+        def bias(handle, left, right):
             for i, pointer in enumerate((left, right)):
-                value = C.cast(pointer, C.POINTER(b.et28_GazeTrackerCalibBias)).contents
+                value = C.cast(pointer, C.POINTER(b.AiotGazeTrackerCalibBias)).contents
                 value.numOfCalibrate = counts[i]
                 value.cablicStatus[1] = statuses[i]
             return 0
-        service.lib.et28_getCalibBias.side_effect = bias
-        for eye in (0, 1):
-            name = ('left', 'right')[eye]
-            for status in (2, -1, 3):
-                statuses[eye] = status
-                with self.subTest(eye=name, status=status), self.assertRaisesRegex(
-                        RuntimeError, rf'{name} bad points=2\(status={status}\)'):
-                    service.feature()
-            statuses[eye] = 0
-            for count in (0, 2, 4, 2**32 - 1):
-                counts[eye] = count
-                with self.subTest(eye=name, count=count), self.assertRaisesRegex(
-                        RuntimeError, f'{name} count={count} expected=3'):
-                    service.feature()
-            counts[eye] = 3
-        service.lib.et28_getFeatureLen.assert_not_called()
-        statuses[:] = [0, 1]  # Perfect and Common both remain acceptable.
+        service._et28.lib.aiotGlass_getCalibBias.side_effect = bias
+        statuses[:] = [2, 1]
         def set_length(pointer, value):
             C.cast(pointer, C.POINTER(C.c_uint32))[0] = value
         for size in (0, 1024 * 1024 + 1):
-            service.lib.et28_getFeatureLen.side_effect = lambda pointer, size=size: set_length(pointer, size)
+            service._et28.lib.aiotGlass_getFeatureLen.side_effect = lambda handle, pointer, size=size: set_length(pointer, size)
             with self.subTest(size=size), self.assertRaisesRegex(RuntimeError, 'feature length'):
                 service.feature()
-        service.lib.et28_SaveCalibrationDataBin.assert_not_called()
-        service.lib.et28_getFeatureLen.side_effect = lambda pointer: set_length(pointer, 4)
+        service._et28.lib.aiotGlass_SaveCalibrationDataBin.assert_not_called()
+        service._et28.lib.aiotGlass_getFeatureLen.side_effect = lambda handle, pointer: set_length(pointer, 4)
         for written in (0, 5, 4):
-            def save(data, pointer, written=written):
+            def save(handle, data, pointer, written=written):
                 data[:4] = b'test'
                 set_length(pointer, written)
                 return 0
-            service.lib.et28_SaveCalibrationDataBin.side_effect = save
+            service._et28.lib.aiotGlass_SaveCalibrationDataBin.side_effect = save
             if written == 4:
                 self.assertEqual(service.feature(), b'test')
+                self.assertEqual(service.calibration_quality['left']['points'][1]['status'], 2)
             else:
                 with self.subTest(written=written), self.assertRaisesRegex(RuntimeError, 'bytes written'):
                     service.feature()
+        counts[0] = 2
+        self.assertEqual(service.feature(), b'test')
+        self.assertIsNone(service.calibration_quality)
+        service._et28.lib.aiotGlass_getCalibBias.side_effect = None
+        service._et28.lib.aiotGlass_getCalibBias.return_value = -7
+        self.assertEqual(service.feature(), b'test')
+        self.assertIsNone(service.calibration_quality)
 
     def test_et28_quality_log_bounds_native_counts_and_sanitizes_bias(self):
-        from services.eye_tracking.adapters.huahong.vendor import et28_dll as b
+        from services.eye_tracking.adapters.huahong.vendor import aiot_dll as b
         service = self.service('HH_ET28')
-        service.points, service.lib, service._et28_feature = 3, Mock(), b'previous-feature'
+        service.points, service._et28_feature = 3, b'previous-feature'
+        self.attach_et28(service)
 
-        def bias(left, right):
-            values = [C.cast(pointer, C.POINTER(b.et28_GazeTrackerCalibBias)).contents
+        def bias(handle, left, right):
+            values = [C.cast(pointer, C.POINTER(b.AiotGazeTrackerCalibBias)).contents
                       for pointer in (left, right)]
             values[0].numOfCalibrate = 2**32 - 1
             values[0].cablicStatus[0], values[0].Score[0] = 2, 77
@@ -456,12 +463,14 @@ class AdapterTests(unittest.TestCase):
             values[1].Bias[0].x, values[1].Bias[0].y = .125, -.25
             return 0
 
-        service.lib.et28_getCalibBias.side_effect = bias
+        service._et28.lib.aiotGlass_getCalibBias.side_effect = bias
+        service._et28.lib.aiotGlass_getFeatureLen.side_effect = lambda _, size: setattr(
+            C.cast(size, C.POINTER(C.c_uint32)).contents, 'value', 1)
+        service._et28.lib.aiotGlass_SaveCalibrationDataBin.return_value = 0
         with patch('services.eye_tracking.adapters.huahong.service.logging.info') as log:
-            with self.assertRaisesRegex(RuntimeError, 'left count=4294967295 expected=3; left bad points=1'):
-                service.feature()
-        log.assert_called_once()
-        template, model, expected, left, right = log.call_args.args
+            self.assertEqual(service.feature(), b'\x00')
+        template, model, expected, left, right = log.call_args_list[0].args
+        self.assertEqual(len(log.call_args_list), 7)
         self.assertIn('huahong.calibration quality', template)
         self.assertEqual((model, expected), ('HH_ET28', 3))
         self.assertEqual(left['count'], 2**32 - 1)
@@ -473,9 +482,7 @@ class AdapterTests(unittest.TestCase):
         self.assertFalse(right['truncated'])
         self.assertEqual(right['points'][0], {'index': 1, 'status': 1, 'score': 91, 'bias': [.125, -.25]})
         json.dumps([left, right], allow_nan=False)
-        self.assertEqual(service._et28_feature, b'')
-        service.lib.et28_getFeatureLen.assert_not_called()
-        service.lib.et28_SaveCalibrationDataBin.assert_not_called()
+        self.assertIsNone(service.calibration_quality)
 
     def test_recording_uses_model_specific_csv_and_metadata(self):
         import shutil
@@ -508,7 +515,7 @@ class AdapterTests(unittest.TestCase):
                 result = recorder.finish()
                 self.assertEqual(result['status'], 'complete', result)
                 self.assertEqual(result['deviceModel'], model)
-                for metadata in (result, json.loads(recorder.meta_path.read_text())):
+                for metadata in (result, json.loads(recorder.meta_path.read_text(encoding='utf-8'))):
                     for key, value in calibration.items():
                         self.assertEqual(metadata[key], value)
                     self.assertEqual(metadata['coordinateSpace'], space)
@@ -516,12 +523,13 @@ class AdapterTests(unittest.TestCase):
                     self.assertTrue(metadata['pupilAlignment'].startswith('not applicable: Huahong'))
                     self.assertIn('live/replay', metadata['gazeCompatibilityAliases'])
                     self.assertIn('normalized 2D', metadata['gazeCompatibilityAliases'])
-                    self.assertIn('CSV gaze_x/y only', metadata['gazeCompatibilityAliases'])
+                    self.assertIn('CSV gaze_x/y', metadata['gazeCompatibilityAliases'])
                     semantics = metadata['measurementSemantics']
-                    self.assertIn('units unverified', semantics['pupilGeometry'])
                     if model == 'HH_ET28':
+                        self.assertIn('diameter in mm', semantics['pupilGeometry'])
                         self.assertIn('normalized-samples.jsonl', semantics['vendorEyeData'])
                     else:
+                        self.assertIn('not exposed', semantics['pupilGeometry'])
                         self.assertIn('not exposed', semantics['vendorEyeData'])
                 import csv
                 with recorder.csv_path.open() as source:
@@ -542,52 +550,71 @@ if __name__ == '__main__':
     unittest.main()
 
 class ET28CallbackTests(unittest.TestCase):
+    def test_missing_usb_cameras_skip_vendor_enumeration(self):
+        from services.eye_tracking.adapters.huahong.vendor import aiot_dll as binding
+        service, lib = self.connection_fixture([])
+        et28 = 'services.eye_tracking.adapters.huahong.aiot_et28'
+        clock = iter(range(0, 1000, 10))
+        with patch.object(binding, 'load_library', return_value=lib), patch(
+                f'{et28}.present_et28_cameras', return_value=False), patch(
+                f'{et28}.missing_et28_cameras', return_value=['场景', '左眼', '右眼']), patch(
+                f'{et28}.time.monotonic', side_effect=lambda: next(clock)), patch(f'{et28}.time.sleep'):
+            with self.assertRaisesRegex(RuntimeError, '三个摄像头'):
+                service._connect_et28()
+        lib.getAiotGlassDevicesList.assert_not_called()
+        service.close()
+        self.assertEqual(service.state, 'idle')
+
     @staticmethod
     def camera_parameters(**changes):
-        from services.eye_tracking.adapters.huahong.vendor import et28_dll as b
+        from services.eye_tracking.adapters.huahong.vendor import aiot_dll as b
         fields = dict(m_worldWidth=1920, m_worldHeight=1080, m_worldFPS=30,
                       m_worldDFoV=112, m_worldHFoV=103, m_worldVFoV=67,
-                      m_irWidth=4, m_irHeight=2, m_irOneEyeWidth=2, m_irOneEyeHeight=2,
+                      m_irOneEyeWidth=2, m_irOneEyeHeight=2,
                       m_irFPS=120, m_irFoV=38, m_worldCameraCropType=1)
         fields.update(changes)
-        return b.et28_CameraPara(**fields)
+        return b.AiotCameraPara(**fields)
 
     def library(self):
         lib = Mock()
-        for name in ('et28_device_init', 'et28_device_connect', 'et28_setCamera_para',
-                     'et28_setIrLedBrightness', 'et28_startCamera', 'et28_InitCalibration'):
+        for name in ('aiotGlass_device_init', 'aiotGlass_initTracker', 'aiotGlass_setCamera_para',
+                     'aiotGlass_setIrLedBrightness', 'aiotGlass_startCamera', 'aiotGlass_InitCalibration'):
             getattr(lib, name).return_value = 0
-        for name in ('et28_getGzSdkVersion', 'et28_getGzAlgVersion', 'et28_getFirmWareVersion'):
+        for name in ('aiotGlass_getSdkVersion', 'aiotGlass_getGzAlgVersion', 'aiotGlass_getFirmWareVersion'):
             getattr(lib, name).return_value = b'test-version'
-        def params(array, capacity, count):
+        def params(handle, array, capacity, count):
             C.cast(count, C.POINTER(C.c_uint32))[0] = 1
             array[0] = self.camera_parameters()
             return 0
-        lib.et28_getCamera_para.side_effect = params
+        lib.aiotGlass_getCamera_para.side_effect = params
+        lib.createAiotGlassDevice.return_value = 42
+        def devices(array, capacity, count):
+            C.cast(count, C.POINTER(C.c_uint32))[0] = 1
+            array[0].m_pid_leftEye, array[0].m_pid_rightEye = b.PID_ET28_LEFT, b.PID_ET28_RIGHT
+            array[0].m_vid_world, array[0].m_pid_world = b.VID_ET28_WORLD, b.PID_ET28_WORLD
+            return 0
+        from services.eye_tracking.adapters.huahong.vendor import aiot_dll as b
+        lib.getAiotGlassDevicesList.side_effect = devices
         return lib
 
     def connection_fixture(self, candidates, config=None):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        dll = root / 'et28/bin/windows/x64'
-        dll.mkdir(parents=True)
-        (dll / 'et28_interface.dll').touch()
         lib = self.library()
 
-        def params(array, capacity, count):
+        def params(handle, array, capacity, count):
             self.assertGreaterEqual(capacity, len(candidates))
             C.cast(count, C.POINTER(C.c_uint32))[0] = len(candidates)
             for index, candidate in enumerate(candidates):
                 array[index] = candidate
             return 0
 
-        lib.et28_getCamera_para.side_effect = params
+        lib.aiotGlass_getCamera_para.side_effect = params
         service = HuahongService('HH_ET28', root, config)
         return service, lib
 
     def test_fixed_camera_profile_ignores_legacy_config_and_preserves_full_first_match(self):
-        from services.eye_tracking.adapters.huahong.vendor import et28_dll as b
-        selected = self.camera_parameters(m_irWidth=800, m_irHeight=400,
-                                          m_irOneEyeWidth=400, m_irOneEyeHeight=400)
+        from services.eye_tracking.adapters.huahong.vendor import aiot_dll as b
+        selected = self.camera_parameters(m_irOneEyeWidth=400, m_irOneEyeHeight=400)
         candidates = [
             self.camera_parameters(m_worldHeight=1200),
             self.camera_parameters(m_worldWidth=1600, m_worldHeight=1200, m_worldCameraCropType=0),
@@ -601,14 +628,14 @@ class ET28CallbackTests(unittest.TestCase):
                 service, lib = self.connection_fixture(candidates, config)
                 applied = []
 
-                def set_parameters(pointer):
-                    applied.append(C.cast(pointer, C.POINTER(b.et28_CameraPara)).contents)
+                def set_parameters(handle, pointer):
+                    applied.append(C.cast(pointer, C.POINTER(b.AiotCameraPara)).contents)
                     # Read the complete native record while its pointer is live.
-                    applied[-1] = b.et28_CameraPara.from_buffer_copy(bytes(applied[-1]))
+                    applied[-1] = b.AiotCameraPara.from_buffer_copy(bytes(applied[-1]))
                     return 0
 
-                lib.et28_setCamera_para.side_effect = set_parameters
-                with patch.object(b, 'library', return_value=lib), patch.dict('os.environ', {}, clear=False), \
+                lib.aiotGlass_setCamera_para.side_effect = set_parameters
+                with patch.object(b, 'load_library', return_value=lib), patch('services.eye_tracking.adapters.huahong.aiot_et28.present_et28_cameras', return_value=True), \
                         self.assertLogs(level='INFO') as logs:
                     service._connect_et28()
                 self.assertEqual(len(applied), 1)
@@ -618,10 +645,10 @@ class ET28CallbackTests(unittest.TestCase):
                 self.assertEqual(candidate_log.args[0], [b.camera_para_to_dict(item) for item in candidates])
                 self.assertEqual(service.shape, (1920, 1080))
                 self.assertEqual((service._eye_preview.width, service._eye_preview.height), (400, 400))
-                lib.et28_startCamera.assert_called_once_with()
+                lib.aiotGlass_startCamera.assert_called_once_with(42)
 
     def test_fixed_camera_profile_rejects_unsupported_dimensions_and_crop_without_fallback(self):
-        from services.eye_tracking.adapters.huahong.vendor import et28_dll as b
+        from services.eye_tracking.adapters.huahong.vendor import aiot_dll as b
         cases = [
             [],
             [self.camera_parameters(m_worldWidth=1600, m_worldHeight=1200, m_worldCameraCropType=0)],
@@ -633,40 +660,37 @@ class ET28CallbackTests(unittest.TestCase):
             for config in ({'world_width': 1600, 'crop_type': 0}, {'world_width': 1920, 'crop_type': 1}):
                 with self.subTest(candidates=[b.camera_para_to_dict(item) for item in candidates], config=config):
                     service, lib = self.connection_fixture(candidates, config)
-                    with patch.object(b, 'library', return_value=lib), patch.dict('os.environ', {}, clear=False):
+                    with patch.object(b, 'load_library', return_value=lib), patch('services.eye_tracking.adapters.huahong.aiot_et28.present_et28_cameras', return_value=True):
                         with self.assertRaises(RuntimeError):
                             service._connect_et28()
-                    lib.et28_setCamera_para.assert_not_called()
-                    lib.et28_startCamera.assert_not_called()
+                    lib.aiotGlass_setCamera_para.assert_not_called()
+                    lib.aiotGlass_startCamera.assert_not_called()
                     self.assertIsNone(service.shape)
                     self.assertIsNone(service._eye_preview)
 
     def test_native_callback_copies_frame_and_normalizes_world_pixels(self):
-        from services.eye_tracking.adapters.huahong.vendor import et28_dll as b
+        from services.eye_tracking.adapters.huahong.vendor import aiot_dll as b
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            dll = root / 'et28/bin/windows/x64'
-            dll.mkdir(parents=True)
-            (dll / 'et28_interface.dll').touch()
             lib = self.library()
             service = HuahongService('HH_ET28', root)
             service.state = 'connecting'
-            with patch.object(b, 'library', return_value=lib), patch.dict('os.environ', {}, clear=False):
+            with patch.object(b, 'load_library', return_value=lib), patch('services.eye_tracking.adapters.huahong.aiot_et28.present_et28_cameras', return_value=True):
                 service._connect_et28()
             self.assertEqual(service.versions, {'sdk': 'test-version'})
-            lib.et28_getGzAlgVersion.assert_not_called()
-            lib.et28_getFirmWareVersion.assert_not_called()
-            lib.et28_setIrLedBrightness.assert_called_once_with(7)
+            lib.aiotGlass_getGzAlgVersion.assert_not_called()
+            lib.aiotGlass_getFirmWareVersion.assert_not_called()
+            lib.aiotGlass_setIrLedBrightness.assert_called_once_with(42, 7)
             operations = [call[0] for call in lib.mock_calls]
-            self.assertLess(operations.index('et28_device_init'), operations.index('et28_getGzSdkVersion'))
-            self.assertLess(operations.index('et28_device_connect'), operations.index('et28_setIrLedBrightness'))
-            self.assertLess(operations.index('et28_setIrLedBrightness'), operations.index('et28_startCamera'))
+            self.assertLess(operations.index('aiotGlass_device_init'), operations.index('aiotGlass_getSdkVersion'))
+            self.assertLess(operations.index('createAiotGlassDevice'), operations.index('aiotGlass_setIrLedBrightness'))
+            self.assertLess(operations.index('aiotGlass_setIrLedBrightness'), operations.index('aiotGlass_startCamera'))
             service.start_calibration(3)
             operations = [call[0] for call in lib.mock_calls]
-            self.assertLess(operations.index('et28_InitCalibration'), operations.index('et28_getGzAlgVersion'))
-            self.assertLess(operations.index('et28_InitCalibration'), operations.index('et28_getFirmWareVersion'))
+            self.assertLess(operations.index('aiotGlass_InitCalibration'), operations.index('aiotGlass_getGzAlgVersion'))
+            self.assertLess(operations.index('aiotGlass_InitCalibration'), operations.index('aiotGlass_getFirmWareVersion'))
             self.assertEqual(service.versions, dict(sdk='test-version', algorithm='test-version', firmware='test-version'))
-            camera = lib.et28_registerWorldCameraCb.call_args.args[0]
+            camera = lib.aiotGlass_registerWorldCameraCb.call_args.args[1]
             raw = bytes(range(256)) * (1920 * 1080 * 3 // 256)
             data = (C.c_uint8 * len(raw)).from_buffer_copy(raw)
             camera(None, data, len(data))
@@ -676,15 +700,15 @@ class ET28CallbackTests(unittest.TestCase):
             self.assertEqual(frame.pixels[0], 0, 'Native memory must be copied before callback returns')
             self.assertEqual(frame.pixels, raw)
             self.assertEqual((frame.width, frame.height), (1920, 1080))
-            tracker = lib.et28_registerTrackerOutputCb.call_args.args[0]
-            output = b.et28_GzTrackerPredictOutput()
-            output.haveGazeInfoLeft = True
-            output.worldPointLeft.x, output.worldPointLeft.y = 960, 540
-            output.haveEyeInfoLeft = True
-            output.eyeInfoLeft.pupilWidth = 12
+            tracker = lib.aiotGlass_registerTrackerOutputCb.call_args.args[1]
+            output = b.AiotGazeTrackerPredictOutput()
+            output.leftPreDict.Gaze.valid = True
+            output.leftPreDict.Gaze.worldPoint.x, output.leftPreDict.Gaze.worldPoint.y = 960, 540
+            output.leftPreDict.Pupil.pupil2d.valid = True
+            output.leftPreDict.Pupil.pupil2d.width = 12
             tracker(None, C.pointer(output))
-            output.worldPointLeft.x = 0
-            output.eyeInfoLeft.pupilWidth = 99
+            output.leftPreDict.Gaze.worldPoint.x = 0
+            output.leftPreDict.Pupil.pupil2d.width = 99
             sample = service.read(0)[0]
             self.assertEqual(sample.position, (.5, .5))
             self.assertEqual(sample.monocular['left']['vendor']['eyeInfo']['pupilWidth'], 12)
@@ -700,23 +724,20 @@ class ET28CallbackTests(unittest.TestCase):
                     self.assertTrue(service.samples.empty(), 'Malformed frame must not enter the recording queue')
 
     def test_ir_led_initialization_failure_is_logged_and_prevents_camera_start(self):
-        from services.eye_tracking.adapters.huahong.vendor import et28_dll as b
+        from services.eye_tracking.adapters.huahong.vendor import aiot_dll as b
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            dll = root / 'et28/bin/windows/x64'
-            dll.mkdir(parents=True)
-            (dll / 'et28_interface.dll').touch()
             lib = self.library()
-            lib.et28_setIrLedBrightness.return_value = -9
+            lib.aiotGlass_setIrLedBrightness.return_value = -9
             service = HuahongService('HH_ET28', root)
-            with patch.object(b, 'library', return_value=lib), patch.dict('os.environ', {}, clear=False), \
+            with patch.object(b, 'load_library', return_value=lib), patch('services.eye_tracking.adapters.huahong.aiot_et28.present_et28_cameras', return_value=True), \
                     self.assertLogs(level='INFO') as logs:
                 with self.assertRaisesRegex(RuntimeError, 'setIrLedBrightness: vendor error -9'):
                     service._connect_et28()
             self.assertTrue(any('brightness=7 result=-9' in line for line in logs.output))
-            lib.et28_startCamera.assert_not_called()
-            lib.et28_getGzAlgVersion.assert_not_called()
-            lib.et28_getFirmWareVersion.assert_not_called()
+            lib.aiotGlass_startCamera.assert_not_called()
+            lib.aiotGlass_getGzAlgVersion.assert_not_called()
+            lib.aiotGlass_getFirmWareVersion.assert_not_called()
 
 
 class ProductContracts(unittest.TestCase):
